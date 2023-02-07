@@ -32,10 +32,10 @@ case class Case(
   statusChange: Instant
 )
 object Case {
-  // not natively supported by Doobie
+  // field not natively supported by Doobie
   implicit val uuidGet: Get[UUID] = Get[String].map(UUID.fromString)
   implicit val uuidPut: Put[UUID] = Put[String].contramap(_.toString)
-  // not natively supported by Doobie
+  // field not natively supported by Doobie
   implicit val caseStatusGet: Get[CaseStatus] =
     Get[String].map {
       case "Pending" => CaseStatus.Pending
@@ -50,7 +50,6 @@ object Case {
       case CaseStatus.Deficient => "Deficient"
       case CaseStatus.Submitted => "Submitted"
     }
-
   implicit val caseRead: Read[Case] =
     Read[(UUID, String, LocalDate, Option[LocalDate], CaseStatus, Instant, Instant)].map(
       db => Case(db._1, db._2, db._3, db._4, db._5, db._6, db._7)

@@ -233,8 +233,9 @@ object ExternalService {
   def live(retryAttemptsLimit: Int): ZLayer[Any, Throwable, ExternalService] =
     ZLayer.succeed(create(retryAttemptsLimit))
 }
+
 /*
-  TODO: Schedules, combinators (&&), and sequencing (++)
+  TODO: Schedules, combinators (&&), and sequencing (++) for retry logiic
     - once
     - recurs(Int) - retries n times and returns the first success or the last failure
     - spaced(Duration) - retries every n.seconds until a success is returned

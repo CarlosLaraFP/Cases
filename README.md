@@ -8,12 +8,23 @@ A case status can be: 'pending', 'under_review', 'deficient', 'submitted'.
 
 When a case status changes, an appropriate message should be published by the API to some "external" service. (This service can be mocked). Assume that this publish service is flaky, and that publishing may need to be retried.
 
-The application should be wired up using ZIO layers.
+Additional requirements:
 
-The API should use Caliban.
+* The application should be wired up using ZIO layers.
+* The API should use Caliban.
+* The backing server should be zio-based (zio-http is fine but its very unstable, so the zio-wrapped Netty backend may be a better choice).
+* The cases should be stored in Postgresql.
+* Some amount of unit or integration testing (whatever is your preferred style) should be implemented, but can be barebones; it's more about the testing setup.
 
-The backing server should be zio-based (zio-http is fine but its very unstable, so the zio-wrapped Netty backend may be a better choice).
+# Next Steps
 
-The cases should be stored in Postgresql.
-
-Some amount of unit or integration testing (whatever is your preferred style) should be implemented, but can be barebones; it's more about the testing setup.
+* Add cats.data (with ZIO interop) to validate API inputs
+* Add property-based testing
+* Increase unit and integration test coverage, including failure test cases
+* Use zio-config to extract configuration values from environment variables
+* Improve 'updateCase' API to allow Case changes beyond CaseStatus
+* Use functional streaming library fs2 for the 'listCases' API
+* Add domain error model
+* Decouple DatabaseService from ExternalService by adding GraphQL Subscriptions (Hub, ZStream, ZPipeline, and ZSink)
+* Deploy GraphQL API as a serverless microservice (CodePipeline, CodeBuild, Docker, ECR, ALB -> ECS/EKS Fargate with horizontal auto-scaling, SQS)
+* GraphQL API load testing to determine service stability as concurrency and RPS increase
