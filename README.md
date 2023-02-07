@@ -16,6 +16,19 @@ Additional requirements:
 * The cases should be stored in Postgresql.
 * Some amount of unit or integration testing (whatever is your preferred style) should be implemented, but can be barebones; it's more about the testing setup.
 
+# PostgreSQL Setup
+
+Before running CaseApp or CaseSpec, run these commands to set up PostgreSQL locally (Mac terminal):
+
+* /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+* brew install postgresql
+* initdb /usr/local/var/postgres
+* pg_ctl -D /usr/local/var/postgres start
+* createdb casesdb
+* psql casesdb
+* CREATE USER postgres WITH LOGIN PASSWORD 'postgres';
+* GRANT ALL PRIVILEGES ON DATABASE casesdb TO postgres;
+
 # Next Steps
 
 * Add cats.data (with ZIO interop) to validate API inputs

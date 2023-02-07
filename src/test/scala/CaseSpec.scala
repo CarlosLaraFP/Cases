@@ -137,6 +137,7 @@ object CaseSpec extends ZIOSpecDefault {
     suite("CaseSpec")(
 
       suite("DatabaseService ZLayer")(
+        createTableTest,
         caseLifecycleTest,
         clearTableTest
       ).provide(
@@ -144,7 +145,7 @@ object CaseSpec extends ZIOSpecDefault {
         ExternalService.live(2),
         PostgresConfig.live(
         "org.postgresql.Driver",
-        "jdbc:postgresql://postgres-instance.cyvqgaenra0q.us-west-2.rds.amazonaws.com:5432/casesdb",
+        "jdbc:postgresql://localhost:5432/casesdb",
         "postgres",
         "postgres"
       )) @@ sequential @@ nonFlaky(3) @@ timed,

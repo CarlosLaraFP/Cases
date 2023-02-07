@@ -86,8 +86,10 @@ class DatabaseService(dbConfig: PostgresConfig, externalService: ExternalService
           )
     }
     result
-      .map(_ => MutationResult(s"${modifyTable.action} successful", None, None))
-      .catchAll(e => ZIO.succeed {
+      .map(_ =>
+        MutationResult(s"${modifyTable.action} successful", None, None)
+      )
+      .catchAll(e => ZIO.attempt {
         MutationResult(s"Doobie ${modifyTable.action} table error: ${e.getMessage}", None, None)
       })
   }

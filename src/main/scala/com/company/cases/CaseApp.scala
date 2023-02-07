@@ -40,14 +40,15 @@ object CaseApp extends ZIOAppDefault {
       ExternalService.live(10),
       PostgresConfig.live(
         "org.postgresql.Driver",
-        "jdbc:postgresql://postgres-instance.cyvqgaenra0q.us-west-2.rds.amazonaws.com:5432/casesdb",
+        "jdbc:postgresql://localhost:5432/casesdb",
         "postgres",
         "postgres"
       ),
-      // TODO: the hard-coded configuration values above can be extracted using ZConfig.fromSystemEnv
       ZLayer.Debug.mermaid
     )
-  /*
+    // TODO: the hard-coded configuration values above can be extracted using ZConfig.fromSystemEnv
+}
+/*
     createTable:
       curl 'http://localhost:8088/api/graphql' --data-binary '{"query":"mutation{\n modifyTable(action: Create){\n result\n}\n}"}'
 
@@ -66,4 +67,3 @@ object CaseApp extends ZIOAppDefault {
     deleteCase:
       curl 'http://localhost:8088/api/graphql' --data-binary '{"query":"mutation{\n deleteCase(id: \"ea1012f8-4886-44c1-8295-bc53ce0f9c5e\"){\n result\n caseId\n}\n}"}'
    */
-}
