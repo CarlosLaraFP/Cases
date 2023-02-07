@@ -139,7 +139,8 @@ object CaseSpec extends ZIOSpecDefault {
       suite("DatabaseService ZLayer")(
         createTableTest,
         caseLifecycleTest,
-        clearTableTest
+        clearTableTest,
+        deleteTableTest
       ).provide(
         DatabaseService.live,
         ExternalService.live(2),
@@ -148,7 +149,7 @@ object CaseSpec extends ZIOSpecDefault {
         "jdbc:postgresql://localhost:5432/casesdb",
         "postgres",
         "postgres"
-      )) @@ sequential @@ nonFlaky(3) @@ timed,
+      )) @@ sequential @@ timed, //@@ nonFlaky(3),
 
       suite("ExternalService ZLayer")(
         flakyServiceTest
@@ -164,7 +165,7 @@ object CaseSpec extends ZIOSpecDefault {
           assertTrue(((x + y) + z) == (x + (y + z)))
         }
       } @@ timed
-    )
+    ) //@@ beforeAll(createTableTest) @@ afterAll(deleteTableTest)
 }
 /*
   TODO: Assertion variants

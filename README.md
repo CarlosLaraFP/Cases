@@ -20,14 +20,20 @@ Additional requirements:
 
 Before running CaseApp or CaseSpec, run these commands to set up PostgreSQL locally (Mac terminal):
 
-* /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-* brew install postgresql
-* initdb /usr/local/var/postgres
-* pg_ctl -D /usr/local/var/postgres start
-* createdb casesdb
-* psql casesdb
-* CREATE USER postgres WITH LOGIN PASSWORD 'postgres';
-* GRANT ALL PRIVILEGES ON DATABASE casesdb TO postgres;
+1. /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+2. brew install postgresql
+3. initdb /usr/local/var/postgres
+4. pg_ctl -D /usr/local/var/postgres start
+5. createdb casesdb
+6. psql casesdb
+7. CREATE USER postgres WITH LOGIN PASSWORD 'postgres';
+8. GRANT ALL PRIVILEGES ON DATABASE casesdb TO postgres;
+9. \q
+
+When you are done:
+
+10. pg_ctl stop -D /usr/local/var/postgres
+
 
 # Next Steps
 
