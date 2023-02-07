@@ -18,7 +18,7 @@ Additional requirements:
 
 # PostgreSQL Setup
 
-Before running CaseApp or CaseSpec, run these commands to set up PostgreSQL locally (Mac terminal):
+Before running CaseApp or CaseSpec, please run these commands to set up PostgreSQL locally (Mac terminal):
 
 * /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 * brew install postgresql
