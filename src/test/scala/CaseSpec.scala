@@ -118,7 +118,7 @@ object CaseSpec extends ZIOSpecDefault {
       }
     }
 
-  val flakyServiceTest: Spec[ExternalService, String] =
+  val flakyServiceTest: Spec[ExternalService, Throwable] =
     test("Publish message to ExternalService when a Case status changes") {
       val effect = for {
         flakyService <- ZIO.service[ExternalService]
@@ -133,6 +133,8 @@ object CaseSpec extends ZIOSpecDefault {
 
   // TODO: Failure test cases
 
+  // TODO: Integration test to verify GraphQL Subscription PubSub
+
   override def spec =
     suite("CaseSpec")(
 
@@ -143,7 +145,9 @@ object CaseSpec extends ZIOSpecDefault {
         deleteTableTest
       ).provide(
         DatabaseService.live,
-        ExternalService.live(2),
+        ZLayer.fromZIO(
+          Hub.unbounded[CaseStatusChanged]
+        ),
         PostgresConfig.live(
         "org.postgresql.Driver",
         "jdbc:postgresql://localhost:5432/casesdb",
@@ -154,7 +158,10 @@ object CaseSpec extends ZIOSpecDefault {
       suite("ExternalService ZLayer")(
         flakyServiceTest
       ).provide(
-        ExternalService.live(3)
+        ExternalService.live(3),
+        ZLayer.fromZIO(
+          Hub.unbounded[CaseStatusChanged]
+        )
       ) @@ diagnose(1.minute) @@ flaky(3) @@ timed,
 
       // TODO++

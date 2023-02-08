@@ -49,6 +49,6 @@ case class Mutations(
 
 case class Subscriptions(
   @GQLDescription("Subscribe to changes in case status")
-  caseStatusChanged: ZStream[Any, Nothing, CaseStatusChanged]
+  caseStatusChanged: ZStream[Any, Throwable, CaseStatusChanged]
 )
 // Hub, ZStream, ZPipeline, ZSink

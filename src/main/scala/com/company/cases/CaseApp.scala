@@ -4,7 +4,7 @@ import caliban.GraphQL.graphQL
 import caliban.ZHttpAdapter
 import zhttp.http._
 import zhttp.service.Server
-import zio.{ZIO, ZIOAppDefault, ZLayer}
+import zio.{Hub, ZIO, ZIOAppDefault, ZLayer}
 
 import scala.language.postfixOps
 
@@ -37,7 +37,12 @@ object CaseApp extends ZIOAppDefault {
     app.provide(
       CaseService.live,
       DatabaseService.live,
-      ExternalService.live(10),
+      ExternalService.live(
+        10
+      ),
+      ZLayer.fromZIO(
+        Hub.unbounded[CaseStatusChanged]
+      ),
       PostgresConfig.live(
         "org.postgresql.Driver",
         "jdbc:postgresql://localhost:5432/casesdb",
