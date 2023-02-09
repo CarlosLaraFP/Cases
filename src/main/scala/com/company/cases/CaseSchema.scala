@@ -28,12 +28,12 @@ case class CaseStatusChanged(
   status: CaseStatus
 )
 
-case class Queries(
+final case class Queries(
   @GQLDescription("List all cases with a specific status and optional created date")
   listCases: ListCases => Task[List[Case]]
 )
 
-case class Mutations(
+final case class Mutations(
   @GQLDescription("Create or delete cases table")
   modifyTable: ModifyTable => Task[MutationResult],
 
@@ -47,7 +47,7 @@ case class Mutations(
   deleteCase: DeleteCase => Task[MutationResult]
 )
 
-case class Subscriptions(
+final case class Subscriptions(
   @GQLDescription("Subscribe to changes in case status")
   caseStatusChanged: ZStream[Any, Throwable, CaseStatusChanged]
 )

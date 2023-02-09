@@ -17,7 +17,7 @@ object CaseApp extends ZIOAppDefault {
     A root resolver contains resolvers for the 3 types of operations allowed in GraphQL: queries, mutations, and subscriptions.
     A resolver is a simple value of the case class describing the API.
   */
-  val app: ZIO[CaseService, Throwable, Nothing] =
+  private val app: ZIO[CaseService, Throwable, Nothing] =
     for {
       caseService <- ZIO.service[CaseService]
       rootResolver <- caseService.rootResolver

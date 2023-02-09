@@ -22,7 +22,7 @@ import java.util.UUID
   Ultimately, the choice of primary key depends on the specific requirements and constraints of the legal case management service.
   In general, UUIDs or sequential UUIDs are a safe choice, as they provide a high level of uniqueness and security.
  */
-case class Case(
+final case class Case(
   id: UUID,
   name: String,
   dateOfBirth: LocalDate,
@@ -67,4 +67,4 @@ object CaseStatus {
   case object Submitted extends CaseStatus
 }
 
-// TODO: Domain error modeling
+// TODO: Domain error modeling (Caliban FAQ)

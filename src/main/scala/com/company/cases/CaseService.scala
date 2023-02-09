@@ -35,7 +35,7 @@ class CaseService(databaseService: DatabaseService, externalService: ExternalSer
     }
 }
 object CaseService {
-  def create(databaseService: DatabaseService, externalService: ExternalService): CaseService =
+  private def create(databaseService: DatabaseService, externalService: ExternalService): CaseService =
     new CaseService(databaseService, externalService)
 
   val live: ZLayer[DatabaseService with ExternalService, Throwable, CaseService] =
@@ -44,7 +44,7 @@ object CaseService {
 
 class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
   // Using Doobie with ZIO Cats Effect 3 interop to interact with PostgreSQL
-  lazy val connection: Aux[Task, Unit] =
+  private lazy val connection: Aux[Task, Unit] =
     Transactor.fromDriverManager[Task](
       dbConfig.driver, // driver classname
       dbConfig.url, // JDBC URL
@@ -196,7 +196,7 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
       })
 }
 object DatabaseService {
-  def create(config: PostgresConfig, hub: Hub[CaseStatusChanged]): DatabaseService =
+  private def create(config: PostgresConfig, hub: Hub[CaseStatusChanged]): DatabaseService =
     new DatabaseService(config, hub)
 
   val live: ZLayer[PostgresConfig with Hub[CaseStatusChanged], Throwable, DatabaseService] =
@@ -205,7 +205,7 @@ object DatabaseService {
 
 case class PostgresConfig(driver: String, url: String, user: String, password: String)
 object PostgresConfig {
-  def create(driver: String, url: String, user: String, password: String): PostgresConfig =
+  private def create(driver: String, url: String, user: String, password: String): PostgresConfig =
     PostgresConfig(driver, url, user, password)
 
   def live(driver: String, url: String, user: String, password: String): ZLayer[Any, Nothing, PostgresConfig] =
@@ -242,7 +242,7 @@ class ExternalService(retryAttemptsLimit: Int, hub: Hub[CaseStatusChanged]) {
       }
 }
 object ExternalService {
-  def create(retryAttemptsLimit: Int)(hub: Hub[CaseStatusChanged]): ExternalService =
+  private def create(retryAttemptsLimit: Int)(hub: Hub[CaseStatusChanged]): ExternalService =
     new ExternalService(retryAttemptsLimit, hub)
 
   def live(retryAttemptsLimit: Int): ZLayer[Hub[CaseStatusChanged], Throwable, ExternalService] =
