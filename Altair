@@ -42,3 +42,5 @@ subscription {
     status
   }
 }
+
+If the GraphQL web service goes down or becomes unavailable, the GraphQL client simply stops receiving events.

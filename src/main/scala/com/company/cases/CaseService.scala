@@ -223,23 +223,27 @@ class ExternalService(retryAttemptsLimit: Int, hub: Hub[CaseStatusChanged]) {
       .fromHub(hub)
       .tap(publishMessage)
 
-  // TODO: Mock and test by receiving UUID and deleting based on it
   def publishMessage(caseStatusChanged: CaseStatusChanged): Task[String] =
     Random
       .nextBoolean
       .flatMap { flag =>
         if (flag) ZIO.succeed {
-          s"Case ${caseStatusChanged.id.toString} status changed to ${caseStatusChanged.status.toString}"
+          val result = s"Case ${caseStatusChanged.id.toString} status changed to ${caseStatusChanged.status.toString}"
+          println(result)
+          result
         }
         else ZIO.fail {
-          new RuntimeException("Unable to reach external service")
+          val error = "Unable to reach external service"
+          println(error)
+          new RuntimeException(error)
         }
       }
       .retry {
         val primarySchedule = Schedule.recurs(retryAttemptsLimit) && Schedule.exponential(1.second, 2.0)
-        val secondarySchedule = Schedule.recurs(3) && Schedule.fibonacci(1.minute)
-        val elapsedTime = Schedule.elapsed.map(duration => println(s"Total time elapsed: $duration"))
-        (primarySchedule ++ secondarySchedule) >>> elapsedTime
+        //val secondarySchedule = Schedule.recurs(3) && Schedule.fibonacci(1.minute)
+        val elapsedTime = Schedule.elapsed.map(duration => println(s"Total time elapsed: ${duration.toMillis} milliseconds."))
+        //(primarySchedule ++ secondarySchedule) >>> elapsedTime
+        primarySchedule.jittered(0.0, 1.0) >>> elapsedTime
       }
 }
 object ExternalService {
