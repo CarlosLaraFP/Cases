@@ -1,7 +1,7 @@
 package com.company.cases
 
 import caliban.schema.Annotations.GQLDescription
-import zio.Task
+import zio.{IO, Task}
 import zio.stream.ZStream
 
 import java.util.UUID

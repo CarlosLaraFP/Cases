@@ -146,6 +146,10 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
           .query[Case]
           .to[List]
       )
+      .mapError { e =>
+        new Exception(e.getMessage)
+      }
+      // Caliban's Executor is expecting a Throwable to be returned in order to handle the error
 
   def updateCase(args: UpdateCase): Task[MutationResult] = {
     // Later: cats.data to build non-monadic string

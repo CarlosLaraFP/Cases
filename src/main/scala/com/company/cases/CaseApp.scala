@@ -27,7 +27,11 @@ object CaseApp extends ZIOAppDefault {
         .start(
           port = 8088,
           http = Http.collectHttp { case _ -> !! / "api" / "graphql" =>
-            ZHttpAdapter.makeHttpService(interpreter)
+            ZHttpAdapter
+              .makeHttpService(
+                interpreter
+                  .mapError(_.getCause)
+              )
           }
         )//.forever
     } yield server
@@ -60,11 +64,14 @@ object CaseApp extends ZIOAppDefault {
     deleteTable:
       curl 'http://localhost:8088/api/graphql' --data-binary '{"query":"mutation{\n modifyTable(action: Delete){\n result\n}\n}"}'
 
+    clearTable:
+      curl 'http://localhost:8088/api/graphql' --data-binary '{"query":"mutation{\n modifyTable(action: Clear){\n result\n}\n}"}'
+
     listCases:
-      curl 'http://localhost:8088/api/graphql' --data-binary '{"query":"query{\n listCases(status: Submitted){\n name\n status\n}\n}"}'
+      curl 'http://localhost:8088/api/graphql' --data-binary '{"query":"query{\n listCases(status: Pending){\n name\n status\n}\n}"}'
 
     createCase:
-      curl 'http://localhost:8088/api/graphql' --data-binary '{"query":"mutation{\n createCase(name: \"Litigatable\", dateOfBirth: \"1990-11-12\"){\n name\n status\n}\n}"}'
+      curl 'http://localhost:8088/api/graphql' --data-binary '{"query":"mutation{\n createCase(name: \"Litigatable\", dateOfBirth: \"1990-11-12\"){\n result\n}\n}"}'
 
     updateCase:
       curl 'http://localhost:8088/api/graphql' --data-binary '{"query":"mutation{\n updateCase(id: \"ea1012f8-4886-44c1-8295-bc53ce0f9c5e\", status: UnderReview){\n result\n caseId\n}\n}"}' --write-out '\n%{http_code}\n'
