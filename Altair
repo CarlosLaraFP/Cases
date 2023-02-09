@@ -1,0 +1,44 @@
+http://localhost:8088/api/graphql
+
+mutation{
+  modifyTable(action: Create){
+    result
+  }
+}
+
+query{
+  listCases(status: Pending){
+    id
+    name
+    status
+  }
+}
+
+mutation{
+  createCase(name: "Special Relativity", dateOfBirth: "1905-01-01"){
+    result
+  }
+}
+
+mutation{
+  updateCase(id: "INSERT_UUID", status: Submitted){
+    result
+    caseId
+  }
+}
+
+mutation{
+  deleteCase(id: "INSERT_UUID"){
+    result
+    caseId
+  }
+}
+
+ws://localhost:8088/ws/graphql
+
+subscription {
+  caseStatusChanged {
+    id,
+    status
+  }
+}

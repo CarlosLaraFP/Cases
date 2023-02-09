@@ -223,6 +223,7 @@ class ExternalService(retryAttemptsLimit: Int, hub: Hub[CaseStatusChanged]) {
       .fromHub(hub)
       .tap(publishMessage)
 
+  // TODO: Mock and test by receiving UUID and deleting based on it
   def publishMessage(caseStatusChanged: CaseStatusChanged): Task[String] =
     Random
       .nextBoolean

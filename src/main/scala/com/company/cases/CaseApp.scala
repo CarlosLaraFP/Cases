@@ -22,16 +22,16 @@ object CaseApp extends ZIOAppDefault {
       caseService <- ZIO.service[CaseService]
       rootResolver <- caseService.rootResolver
       api = graphQL(rootResolver)
-      interpreter <- api.interpreter
+      apiInterpreter <- api.interpreter
+      interpreter = apiInterpreter.mapError(_.getCause)
       server <- Server
         .start(
           port = 8088,
-          http = Http.collectHttp { case _ -> !! / "api" / "graphql" =>
-            ZHttpAdapter
-              .makeHttpService(
-                interpreter
-                  .mapError(_.getCause)
-              )
+          http = Http.collectHttp {
+            case _ -> !! / "api" / "graphql" =>
+              ZHttpAdapter.makeHttpService(interpreter)
+            case _ -> !! / "ws" / "graphql" =>
+              ZHttpAdapter.makeWebSocketService(interpreter)
           }
         )//.forever
     } yield server
