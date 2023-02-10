@@ -140,8 +140,10 @@ object CaseSpec extends ZIOSpecDefault {
 
       suite("DatabaseService ZLayer")(
         createTableTest,
-        caseLifecycleTest,
-        clearTableTest,
+        suite("")(
+          caseLifecycleTest,
+          clearTableTest
+        ) @@ nonFlaky(5),
         deleteTableTest
       ).provide(
         DatabaseService.live,
@@ -153,7 +155,8 @@ object CaseSpec extends ZIOSpecDefault {
         "jdbc:postgresql://localhost:5432/casesdb",
         "postgres",
         "postgres"
-      )) @@ sequential @@ timed, //@@ nonFlaky(3),
+        )
+      ) @@ sequential,
 
       suite("ExternalService ZLayer")(
         flakyServiceTest
@@ -162,7 +165,7 @@ object CaseSpec extends ZIOSpecDefault {
         ZLayer.fromZIO(
           Hub.unbounded[CaseStatusChanged]
         )
-      ) @@ diagnose(1.minute) @@ flaky(3) @@ timed,
+      ) @@ diagnose(1.minute) @@ flaky(3),
 
       // TODO++
       test("Property-Based Testing") {
@@ -171,8 +174,8 @@ object CaseSpec extends ZIOSpecDefault {
           // Statement must be true for all x, y, z, ...
           assertTrue(((x + y) + z) == (x + (y + z)))
         }
-      } @@ timed
-    ) //@@ beforeAll(createTableTest) @@ afterAll(deleteTableTest)
+      }
+    ) @@ timed //@@ beforeAll(createTableTest) @@ afterAll(deleteTableTest)
 }
 /*
   TODO: Assertion variants
