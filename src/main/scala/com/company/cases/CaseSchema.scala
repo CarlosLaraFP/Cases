@@ -1,8 +1,7 @@
 package com.company.cases
 
-import caliban.CalibanError.ExecutionError
+import ErrorModel._
 import caliban.schema.Annotations.GQLDescription
-import caliban.schema.Schema
 import zio.{IO, Task}
 import zio.stream.ZStream
 
@@ -24,7 +23,7 @@ object TableAction {
   case object Delete extends TableAction
   case object Clear extends TableAction
 }
-case class MutationResult(result: String, caseId: Option[String], caseStatus: Option[CaseStatus])
+case class Mutation(result: String, caseId: Option[String], caseStatus: Option[CaseStatus])
 case class CaseStatusChanged(
   id: UUID,
   status: CaseStatus
@@ -37,16 +36,16 @@ final case class Queries(
 
 final case class Mutations(
   @GQLDescription("Create or delete cases table")
-  modifyTable: ModifyTable => Task[MutationResult],
+  modifyTable: ModifyTable => Task[Mutation],
 
   @GQLDescription("Create a new case")
-  createCase: CreateCase => IO[String, MutationResult],
+  createCase: CreateCase => Result[Mutation],
 
   @GQLDescription("Update the status of a case")
-  updateCase: UpdateCase => Task[MutationResult],
+  updateCase: UpdateCase => Task[Mutation],
 
   @GQLDescription("Delete a case based on UUID")
-  deleteCase: DeleteCase => Task[MutationResult]
+  deleteCase: DeleteCase => Task[Mutation]
 )
 
 final case class Subscriptions(

@@ -11,28 +11,36 @@ import java.time.{Instant, LocalDate}
 import java.util.UUID
 import scala.util.Try
 
-object ErrorModel {
+case class InputValidationError(message: String)
+object InputValidationError {
 
-  implicit val combineStringErrors: Semigroup[String] =
-    Semigroup.instance[String] {
-      (a, b) => a + " | " + b
+  implicit val combineStringErrors: Semigroup[InputValidationError] =
+    Semigroup.instance[InputValidationError] {
+      (errorA, errorB) =>
+        InputValidationError(errorA.message + " | " + errorB.message)
     }
 
-  implicit def customEffectSchema[A](implicit s: Schema[Any, A]): Schema[Any, IO[String, A]] =
-    Schema.customErrorEffectSchema((message: String) => ExecutionError(message))
+  implicit def customEffectSchema[A](implicit s: Schema[Any, A]): Schema[Any, IO[InputValidationError, A]] =
+    Schema.customErrorEffectSchema((error: InputValidationError) => ExecutionError(error.message))
+}
 
-  type InputValidation[T] = Validated[String, T]
+object ErrorModel {
+
+  type InputValidation[T] = Validated[InputValidationError, T]
+  type Result[T] = IO[InputValidationError, T]
 
   private def nameValidation(name: String): InputValidation[String] =
-    Validated.cond(name.nonEmpty, name, "Name must not be blank.")
-      .combine(Validated.cond(name.length < 100, name, "Name must be less than 100 characters."))
+    Validated.cond(name.nonEmpty, name, InputValidationError("Name must not be blank."))
+      .combine(Validated.cond(name.length < 100, name, InputValidationError("Name must be less than 100 characters.")))
 
   private def dateValidation(date: Option[String]): InputValidation[String] =
     if (date.isEmpty) Validated.valid("")
     else Validated
       .fromTry(Try(LocalDate.parse(date.get).toString))
       .leftMap(e =>
-        s"${e.getMessage} -> ISO 8601 standard date format yyyy-MM-dd required."
+        InputValidationError(
+          s"${e.getMessage} -> ISO 8601 standard date format yyyy-MM-dd required."
+        )
       )
 
   def validateCreateCase(args: CreateCase): InputValidation[Case] =

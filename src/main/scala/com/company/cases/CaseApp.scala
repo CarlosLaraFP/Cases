@@ -4,8 +4,6 @@ package com.company.cases
  Caliban requires implicit Schema(s) in scope at compile time to handle generic IO effects
  (otherwise, apiInterpreter.mapError(_.getCause) to surface exceptions to users)
  */
-import ErrorModel._
-
 import caliban.GraphQL.graphQL
 import caliban.ZHttpAdapter
 import zhttp.http._

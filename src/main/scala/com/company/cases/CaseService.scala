@@ -49,6 +49,7 @@ object CaseService {
 }
 
 class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
+
   // Using Doobie with ZIO Cats Effect 3 interop to interact with PostgreSQL
   private lazy val connection: Aux[Task, Unit] =
     Transactor.fromDriverManager[Task](
@@ -58,7 +59,7 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
       dbConfig.password // password
     )
 
-  def modifyTable(modifyTable: ModifyTable): Task[MutationResult] = {
+  def modifyTable(modifyTable: ModifyTable): Task[Mutation] = {
     val result = modifyTable.action match {
       case TableAction.Create =>
         connection
@@ -97,14 +98,14 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
     }
     result
       .map(_ =>
-        MutationResult(s"${modifyTable.action} successful", None, None)
+        Mutation(s"${modifyTable.action} successful", None, None)
       )
       .catchAll(e => ZIO.attempt {
-        MutationResult(s"Doobie ${modifyTable.action} table error: ${e.getMessage}", None, None)
+        Mutation(s"Doobie ${modifyTable.action} table error: ${e.getMessage}", None, None)
       })
   }
 
-  def createCase(args: CreateCase): IO[String, MutationResult] =
+  def createCase(args: CreateCase): Result[Mutation] =
       for {
         newCase <- ZIO.fromEither(validateCreateCase(args).toEither)
         _ <- connection // doobie.postgres.implicits._ for automatic casts
@@ -125,8 +126,8 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
             .update
             .run
         )
-        .mapError(_.getMessage)
-      } yield MutationResult(
+        .mapError(e => InputValidationError(e.getMessage))
+      } yield Mutation(
         s"Case ${newCase.name} inserted successfully.",
         Some(newCase.id.toString),
         Some(newCase.status)
@@ -147,7 +148,7 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
       )
   // Caliban's Executor is expecting a Throwable to be returned
 
-  def updateCase(args: UpdateCase): Task[MutationResult] = {
+  def updateCase(args: UpdateCase): Task[Mutation] = {
     // Later: cats.data to build non-monadic string
     val updateEffect = connection
       .trans
@@ -162,7 +163,7 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
           .update.run
       )
       .map(_ =>
-        MutationResult(s"Status ${args.status} applied successfully.", Some(args.id.toString), Some(args.status))
+        Mutation(s"Status ${args.status} applied successfully.", Some(args.id.toString), Some(args.status))
       )
     // When a case status changes, an appropriate message should be published by the API to some "external" service.
     for {
@@ -174,7 +175,7 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
     } yield result
   }
 
-  def deleteCase(args: DeleteCase): Task[MutationResult] =
+  def deleteCase(args: DeleteCase): Task[Mutation] =
     connection
       .trans
       .apply(
@@ -185,10 +186,10 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
           .update.run
       )
       .map(_ =>
-        MutationResult(s"Case deleted successfully.", Some(args.id.toString), None)
+        Mutation(s"Case deleted successfully.", Some(args.id.toString), None)
       )
       .catchAll(e => ZIO.attempt {
-        MutationResult(s"Failure: ${e.getMessage}", Some(args.id.toString), None)
+        Mutation(s"Failure: ${e.getMessage}", Some(args.id.toString), None)
       })
 }
 object DatabaseService {
