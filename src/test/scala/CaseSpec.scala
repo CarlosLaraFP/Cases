@@ -195,7 +195,7 @@ object CaseSpec extends ZIOSpecDefault {
         ZLayer.fromZIO(
           Hub.unbounded[CaseStatusChanged]
         ),
-        PostgresConfig.live(
+        PostgresConnection.live(
         "org.postgresql.Driver",
         "jdbc:postgresql://localhost:5432/casesdb",
         "postgres",

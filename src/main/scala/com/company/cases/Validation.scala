@@ -14,7 +14,7 @@ import scala.util.Try
 case class InputValidationError(message: String)
 object InputValidationError {
 
-  implicit val combineStringErrors: Semigroup[InputValidationError] =
+  implicit val validationCombinator: Semigroup[InputValidationError] =
     Semigroup.instance[InputValidationError] {
       (errorA, errorB) =>
         InputValidationError(errorA.message + " | " + errorB.message)

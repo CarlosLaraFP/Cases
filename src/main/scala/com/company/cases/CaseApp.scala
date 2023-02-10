@@ -48,7 +48,7 @@ object CaseApp extends ZIOAppDefault {
       ZLayer.fromZIO(
         Hub.unbounded[CaseStatusChanged]
       ),
-      PostgresConfig.live(
+      PostgresConnection.live(
         "org.postgresql.Driver",
         "jdbc:postgresql://localhost:5432/casesdb",
         "postgres",
@@ -56,7 +56,7 @@ object CaseApp extends ZIOAppDefault {
       ),
       ZLayer.Debug.mermaid
     )
-    // TODO: the hard-coded configuration values above can be extracted using ZConfig.fromSystemEnv
+    // TODO: the hard-coded configuration values above can be extracted from the host Docker container using ZConfig.fromSystemEnv
 }
 /*
     createTable:

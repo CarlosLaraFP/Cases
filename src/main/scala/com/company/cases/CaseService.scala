@@ -2,13 +2,13 @@ package com.company.cases
 
 import Validation._
 import TableAction._
-
 import caliban.RootResolver
 import doobie.Transactor
 import doobie.implicits._
 import doobie.util.transactor.Transactor.Aux
 import doobie.postgres._
 import doobie.postgres.implicits._
+import doobie.util.fragment.Fragment
 import zio._
 import zio.stream.ZStream
 // provides the necessary implicit conversion from doobie.Transactor to zio.Task
@@ -44,17 +44,9 @@ object CaseService {
     ZLayer.fromFunction(create _)
 }
 
-class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
-
+class DatabaseService(connection: PostgresConnection, hub: Hub[CaseStatusChanged]) {
   // Using Doobie with ZIO Cats Effect 3 interop to interact with PostgreSQL
-  private lazy val connection: Aux[Task, Unit] =
-    Transactor.fromDriverManager[Task](
-      dbConfig.driver, // driver classname
-      dbConfig.url, // JDBC URL
-      dbConfig.user, // username
-      dbConfig.password // password
-    )
-
+  // doobie.postgres.implicits._ for automatic casts
   def modifyTable(args: ModifyTable): Result[Mutation] = {
     val postgresQuery = args.action match {
       case Create =>
@@ -80,67 +72,54 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
         """
     }
     connection
-      .trans
-      .apply(
-        postgresQuery
-          .update
-          .run
+      .executeMutation(postgresQuery)
+      .map(_ =>
+        Mutation(s"${args.action} successful", None, None)
       )
-      .map(_ => Mutation(s"${args.action} successful", None, None))
-      .mapError(e => InputValidationError(e.getMessage))
   }
 
   def createCase(args: CreateCase): Result[Mutation] =
     for {
       newCase <- ZIO.fromEither(validateCreateCase(args).toEither)
-      _ <- connection // doobie.postgres.implicits._ for automatic casts
-      .trans
-      .apply(
-        sql"""
-          INSERT INTO "Case" (id, name, dateOfBirth, dateOfDeath, status, created, statusChange)
-          VALUES (
-            ${newCase.id},
-            ${newCase.name},
-            ${newCase.dateOfBirth},
-            ${newCase.dateOfDeath},
-            ${newCase.status.toString},
-            ${newCase.created},
-            ${newCase.statusChange}
-          );
-          """
-          .update
-          .run
-      )
-      .mapError(e => InputValidationError(e.getMessage))
+      _ <- connection
+        .executeMutation(
+          sql"""
+            INSERT INTO "Case" (id, name, dateOfBirth, dateOfDeath, status, created, statusChange)
+            VALUES (
+              ${newCase.id},
+              ${newCase.name},
+              ${newCase.dateOfBirth},
+              ${newCase.dateOfDeath},
+              ${newCase.status.toString},
+              ${newCase.created},
+              ${newCase.statusChange}
+            );
+            """
+        )
     } yield Mutation(
       s"Case ${newCase.name} inserted successfully.",
       Some(newCase.id.toString),
       Some(newCase.status)
     )
 
-  // TODO: functional streaming library fs2 to use Stream instead of List to avoid potential OOM runtime exception
   def listCases(args: ListCases): Result[List[Case]] =
+    // TODO: functional streaming library fs2 to use Stream instead of List to avoid potential OOM runtime exception
     for {
       _ <- ZIO.fromEither(validateListCases(args).toEither)
       cases <- connection
-        .trans
-        .apply(
+        .executeQuery(
           sql"""
           SELECT id, name, dateOfBirth, dateOfDeath, status, created, statusChange
           FROM "Case"
           WHERE status = ${args.status.toString}
         """
-            .query[Case]
-            .to[List]
         )
-        .mapError(e => InputValidationError(e.getMessage))
     } yield cases
 
   def updateCase(args: UpdateCase): Result[Mutation] =
     for {
       _ <- connection
-        .trans
-        .apply(
+        .executeMutation(
           sql"""
             UPDATE "Case"
             SET
@@ -148,43 +127,69 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
               statusChange = ${Instant.now}
             WHERE id = ${args.id};
           """
-            .update
-            .run
         )
-        .mapError(e => InputValidationError(e.getMessage))
       _ <- hub
         .publish(CaseStatusChanged(args.id, args.status))
         .forkDaemon
-    } yield Mutation(s"Status ${args.status} applied successfully.", Some(args.id.toString), Some(args.status))
+    } yield Mutation(
+      s"Status ${args.status} applied successfully.",
+      Some(args.id.toString),
+      Some(args.status)
+    )
 
   def deleteCase(args: DeleteCase): Result[Mutation] =
     connection
-      .trans
-      .apply(
+      .executeMutation(
         sql"""
           DELETE FROM "Case"
           WHERE id = ${args.id};
         """
-          .update
-          .run
       )
-      .map(_ => Mutation(s"Case deleted successfully.", Some(args.id.toString), None))
-      .mapError(e => InputValidationError(e.getMessage))
+      .map(_ =>
+        Mutation(s"Case deleted successfully.", Some(args.id.toString), None)
+      )
 }
 object DatabaseService {
-  private def create(config: PostgresConfig, hub: Hub[CaseStatusChanged]): DatabaseService =
+  private def create(config: PostgresConnection, hub: Hub[CaseStatusChanged]): DatabaseService =
     new DatabaseService(config, hub)
 
-  val live: ZLayer[PostgresConfig with Hub[CaseStatusChanged], Throwable, DatabaseService] =
+  val live: ZLayer[PostgresConnection with Hub[CaseStatusChanged], Throwable, DatabaseService] =
     ZLayer.fromFunction(create _)
 }
 
-case class PostgresConfig(driver: String, url: String, user: String, password: String)
-object PostgresConfig {
-  private def create(driver: String, url: String, user: String, password: String): PostgresConfig =
-    PostgresConfig(driver, url, user, password)
+case class PostgresConnection(transactor: Aux[Task, Unit]) {
+  def executeMutation(fragment: Fragment): Result[Int] =
+    transactor
+      .trans
+      .apply(
+        fragment
+          .update
+          .run
+      )
+      .mapError(e => InputValidationError(e.getMessage))
 
-  def live(driver: String, url: String, user: String, password: String): ZLayer[Any, Nothing, PostgresConfig] =
+  def executeQuery(fragment: Fragment): Result[List[Case]] =
+    transactor
+      .trans
+      .apply(
+        fragment
+          .query[Case]
+          .to[List]
+      )
+      .mapError(e => InputValidationError(e.getMessage))
+}
+object PostgresConnection {
+  private def create(driver: String, url: String, user: String, password: String): PostgresConnection =
+    PostgresConnection(
+      Transactor.fromDriverManager[Task](
+        driver, // driver classname
+        url, // JDBC URL
+        user, // username
+        password // password
+      )
+    )
+
+  def live(driver: String, url: String, user: String, password: String): ZLayer[Any, Nothing, PostgresConnection] =
     ZLayer.succeed(create(driver, url, user, password))
 }
 
