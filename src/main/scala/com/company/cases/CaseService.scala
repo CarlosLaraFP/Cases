@@ -1,7 +1,8 @@
 package com.company.cases
 
+import ErrorModel._
+
 import caliban.RootResolver
-import cats.Semigroup
 import doobie.Transactor
 import doobie.implicits._
 import doobie.util.transactor.Transactor.Aux
@@ -101,32 +102,6 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
       .catchAll(e => ZIO.attempt {
         MutationResult(s"Doobie ${modifyTable.action} table error: ${e.getMessage}", None, None)
       })
-  }
-
-  implicit val combineStringErrors: Semigroup[IllegalArgumentException] =
-    Semigroup.instance[IllegalArgumentException] {
-      (a, b) => new IllegalArgumentException(a.getMessage + ", " + b.getMessage)
-    }
-
-  type InputValidation[T] = Validated[Throwable, T]
-
-  private def validateCreateCase(args: CreateCase): InputValidation[Case] = {
-
-    val nameValidation = Validated.cond(args.name.nonEmpty, args.name, new IllegalArgumentException("Name must not be blank."))
-      .combine(Validated.cond(args.name.length < 100, args.name, new IllegalArgumentException("Name must be less than 100 characters.")))
-    val dobValidation = Validated.fromTry(Try(LocalDate.parse(args.dateOfBirth).toString)).leftMap(e => new IllegalArgumentException(e.getMessage))
-    val dodValidation = if (args.dateOfDeath.isEmpty) Validated.valid("") else Validated.fromTry(Try(LocalDate.parse(args.dateOfDeath.get).toString)).leftMap(e => new IllegalArgumentException(e.getMessage))
-
-    (nameValidation |+| dobValidation |+| dodValidation)
-      .map(_ => Case(
-        UUID.randomUUID,
-        args.name,
-        LocalDate.parse(args.dateOfBirth),
-        if (args.dateOfDeath.nonEmpty) Some(LocalDate.parse(args.dateOfDeath.get)) else Option.empty[LocalDate],
-        CaseStatus.Pending, // a new Case starts Pending
-        Instant.now,
-        Instant.now
-      ))
   }
 
   def createCase(args: CreateCase): Task[MutationResult] =
