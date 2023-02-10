@@ -9,6 +9,7 @@ import doobie.util.transactor.Transactor.Aux
 import doobie.postgres._
 import doobie.postgres.implicits._
 import doobie.util.fragment.Fragment
+import doobie.util.Read
 import zio._
 import zio.stream.ZStream
 // provides the necessary implicit conversion from doobie.Transactor to zio.Task
@@ -107,7 +108,7 @@ class DatabaseService(connection: PostgresConnection, hub: Hub[CaseStatusChanged
     for {
       _ <- ZIO.fromEither(validateListCases(args).toEither)
       cases <- connection
-        .executeQuery(
+        .executeQuery[Case](
           sql"""
           SELECT id, name, dateOfBirth, dateOfDeath, status, created, statusChange
           FROM "Case"
@@ -168,12 +169,13 @@ case class PostgresConnection(transactor: Aux[Task, Unit]) {
       )
       .mapError(e => InputValidationError(e.getMessage))
 
-  def executeQuery(fragment: Fragment): Result[List[Case]] =
+  def executeQuery[T : Read](fragment: Fragment): Result[List[T]] =
+    // requires an implicit Read[T] in scope
     transactor
       .trans
       .apply(
         fragment
-          .query[Case]
+          .query[T]
           .to[List]
       )
       .mapError(e => InputValidationError(e.getMessage))
