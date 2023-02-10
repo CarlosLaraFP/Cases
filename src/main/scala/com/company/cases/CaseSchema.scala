@@ -34,7 +34,7 @@ case class CaseStatusChanged(
 
 final case class Queries(
   @GQLDescription("List all cases with a specific status and optional created date")
-  listCases: ListCases => Result[List[Case]]
+  listCases: ListCases => Result[Vector[Case]]
 )
 
 final case class Mutations(

@@ -54,6 +54,7 @@ object Case {
     Read[(UUID, String, LocalDate, Option[LocalDate], CaseStatus, Instant, Instant)].map(
       db => Case(db._1, db._2, db._3, db._4, db._5, db._6, db._7)
     )
+  // this does not seem necessary
   implicit val caseWrite: Write[Case] =
     Write[(UUID, String, LocalDate, Option[LocalDate], CaseStatus, Instant, Instant)].contramap(
       c => (c.id, c.name, c.dateOfBirth, c.dateOfDeath, c.status, c.created, c.statusChange)

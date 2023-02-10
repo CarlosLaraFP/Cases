@@ -103,7 +103,7 @@ class DatabaseService(connection: PostgresConnection, hub: Hub[CaseStatusChanged
       Some(newCase.status)
     )
 
-  def listCases(args: ListCases): Result[List[Case]] =
+  def listCases(args: ListCases): Result[Vector[Case]] =
     // TODO: functional streaming library fs2 to use Stream instead of List to avoid potential OOM runtime exception
     for {
       _ <- ZIO.fromEither(validateListCases(args).toEither)
@@ -169,14 +169,14 @@ case class PostgresConnection(transactor: Aux[Task, Unit]) {
       )
       .mapError(e => InputValidationError(e.getMessage))
 
-  def executeQuery[T : Read](fragment: Fragment): Result[List[T]] =
+  def executeQuery[T : Read](fragment: Fragment): Result[Vector[T]] =
     // requires an implicit Read[T] in scope
     transactor
       .trans
       .apply(
         fragment
           .query[T]
-          .to[List]
+          .to[Vector]
       )
       .mapError(e => InputValidationError(e.getMessage))
 }
