@@ -1,6 +1,7 @@
 package com.company.cases
 
 import caliban.RootResolver
+import cats.Semigroup
 import doobie.Transactor
 import doobie.implicits._
 import doobie.util.transactor.Transactor.Aux
@@ -8,9 +9,13 @@ import doobie.postgres._
 import doobie.postgres.implicits._
 import zio._
 import zio.stream.ZStream
+
+import scala.util.Try
 // provides the necessary implicit conversion from doobie.Transactor to zio.Task
 import zio.interop.catz._
 import zio.interop.catz.implicits._
+import cats.data.Validated
+import cats.implicits._
 import java.time._
 import java.util.UUID
 
@@ -98,40 +103,56 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
       })
   }
 
-  def createCase(args: CreateCase): Task[MutationResult] = {
-    val newCase = Case(
-      UUID.randomUUID,
-      args.name,
-      LocalDate.parse(args.dateOfBirth),
-      if (args.dateOfDeath.nonEmpty) Some(LocalDate.parse(args.dateOfDeath.get)) else Option.empty[LocalDate],
-      CaseStatus.Pending, // a new Case starts Pending
-      Instant.now,
-      Instant.now
-    )
-    // doobie.postgres.implicits._ for automatic casts
-    connection
-      .trans
-      .apply(
-        sql"""
-            INSERT INTO "Case" (id, name, dateOfBirth, dateOfDeath, status, created, statusChange)
-            VALUES (
-              ${newCase.id},
-              ${newCase.name},
-              ${newCase.dateOfBirth},
-              ${newCase.dateOfDeath},
-              ${newCase.status.toString},
-              ${newCase.created},
-              ${newCase.statusChange}
-            );
-            """.update.run
-      )
-      .map(_ =>
-        MutationResult(s"Case ${newCase.name} inserted successfully.", Some(newCase.id.toString), None)
-      )
-      .catchAll(e => ZIO.attempt {
-        MutationResult(s"Failure: ${e.getMessage}", None, None)
-      })
+  implicit val combineStringErrors: Semigroup[IllegalArgumentException] =
+    Semigroup.instance[IllegalArgumentException] {
+      (a, b) => new IllegalArgumentException(a.getMessage + ", " + b.getMessage)
+    }
+
+  type InputValidation[T] = Validated[Throwable, T]
+
+  private def validateCreateCase(args: CreateCase): InputValidation[Case] = {
+
+    val nameValidation = Validated.cond(args.name.nonEmpty, args.name, new IllegalArgumentException("Name must not be blank."))
+      .combine(Validated.cond(args.name.length < 100, args.name, new IllegalArgumentException("Name must be less than 100 characters.")))
+    val dobValidation = Validated.fromTry(Try(LocalDate.parse(args.dateOfBirth).toString)).leftMap(e => new IllegalArgumentException(e.getMessage))
+    val dodValidation = if (args.dateOfDeath.isEmpty) Validated.valid("") else Validated.fromTry(Try(LocalDate.parse(args.dateOfDeath.get).toString)).leftMap(e => new IllegalArgumentException(e.getMessage))
+
+    (nameValidation |+| dobValidation |+| dodValidation)
+      .map(_ => Case(
+        UUID.randomUUID,
+        args.name,
+        LocalDate.parse(args.dateOfBirth),
+        if (args.dateOfDeath.nonEmpty) Some(LocalDate.parse(args.dateOfDeath.get)) else Option.empty[LocalDate],
+        CaseStatus.Pending, // a new Case starts Pending
+        Instant.now,
+        Instant.now
+      ))
   }
+
+  def createCase(args: CreateCase): Task[MutationResult] =
+      for {
+        newCase <- ZIO.fromEither(validateCreateCase(args).toEither)
+        _ <- connection // doobie.postgres.implicits._ for automatic casts
+        .trans
+        .apply(
+        sql"""
+                INSERT INTO "Case" (id, name, dateOfBirth, dateOfDeath, status, created, statusChange)
+                VALUES (
+                  ${newCase.id},
+                  ${newCase.name},
+                  ${newCase.dateOfBirth},
+                  ${newCase.dateOfDeath},
+                  ${newCase.status.toString},
+                  ${newCase.created},
+                  ${newCase.statusChange}
+                );
+                """.update.run
+        )
+      } yield MutationResult(
+        s"Case ${newCase.name} inserted successfully.",
+        Some(newCase.id.toString),
+        Some(newCase.status)
+      )
 
   // TODO: functional streaming library fs2 to use Stream instead of List to avoid potential OOM runtime exception
   def listCases(args: ListCases): Task[List[Case]] =
@@ -146,10 +167,7 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
           .query[Case]
           .to[List]
       )
-      .mapError { e =>
-        new Exception(e.getMessage)
-      }
-      // Caliban's Executor is expecting a Throwable to be returned in order to handle the error
+  // Caliban's Executor is expecting a Throwable to be returned
 
   def updateCase(args: UpdateCase): Task[MutationResult] = {
     // Later: cats.data to build non-monadic string
@@ -215,7 +233,7 @@ object PostgresConfig {
 class ExternalService(retryAttemptsLimit: Int, hub: Hub[CaseStatusChanged]) {
   /*
     Mocking SQS FIFO queue: In this legal case management domain, case status changes cannot arrive out of order.
-    Therefore, the flaky nature of the service can be attributed to SendMessage API throttling,
+    Therefore, the flaky nature of the service could be attributed to SendMessage API throttling,
     or OverLimit exception from in-flight messages if the consumer microservice is not deleting them fast enough.
    */
   val caseStatusChanged: ZStream[Any, Throwable, CaseStatusChanged] =
@@ -223,6 +241,7 @@ class ExternalService(retryAttemptsLimit: Int, hub: Hub[CaseStatusChanged]) {
       .fromHub(hub)
       .tap(publishMessage)
 
+  // Mocking a side-effect in the server, but the ZStream events are meant for client delivery (through WebSocket)
   def publishMessage(caseStatusChanged: CaseStatusChanged): Task[String] =
     Random
       .nextBoolean

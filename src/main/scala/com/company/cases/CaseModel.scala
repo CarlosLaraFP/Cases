@@ -68,3 +68,4 @@ object CaseStatus {
 }
 
 // TODO: Domain error modeling (Caliban FAQ)
+sealed trait InputError
