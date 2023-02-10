@@ -9,7 +9,7 @@ object CaseSpec extends ZIOSpecDefault {
 
   // TODO: Unit tests
 
-  val deleteTableTest: Spec[DatabaseService, Throwable] =
+  val deleteTableTest: Spec[DatabaseService, InputValidationError] =
     test("databaseService.modifyTable with Delete") {
       val effect = for {
         dbService <- ZIO.service[DatabaseService]
@@ -24,7 +24,7 @@ object CaseSpec extends ZIOSpecDefault {
       }
     }
 
-  val createTableTest: Spec[DatabaseService, Throwable] =
+  val createTableTest: Spec[DatabaseService, InputValidationError] =
     test("databaseService.modifyTable with Create") {
       val effect = for {
         dbService <- ZIO.service[DatabaseService]
@@ -39,7 +39,7 @@ object CaseSpec extends ZIOSpecDefault {
       }
     }
 
-  val clearTableTest: Spec[DatabaseService, Throwable] =
+  val clearTableTest: Spec[DatabaseService, InputValidationError] =
     test("databaseService.modifyTable with Clear") {
       val effect = for {
         dbService <- ZIO.service[DatabaseService]
@@ -54,7 +54,7 @@ object CaseSpec extends ZIOSpecDefault {
       }
     }
 
-  val createCaseTest: Spec[DatabaseService, Throwable] =
+  val createCaseTest: Spec[DatabaseService, InputValidationError] =
     test("databaseService.createCase Mutation with Doobie") {
       val effect = for {
         dbService <- ZIO.service[DatabaseService]
@@ -69,7 +69,7 @@ object CaseSpec extends ZIOSpecDefault {
       }
     }
 
-  val listCasesTest: Spec[DatabaseService, Throwable] =
+  val listCasesTest: Spec[DatabaseService, InputValidationError] =
     test("databaseService.listCases Query with Doobie") {
       val effect = for {
         dbService <- ZIO.service[DatabaseService]
@@ -91,7 +91,7 @@ object CaseSpec extends ZIOSpecDefault {
     to perform the main case management operations.
     This test verifies that all of these interactions with the database service are working as expected.
    */
-  val caseLifecycleTest: Spec[DatabaseService, Throwable] =
+  val caseLifecycleTest: Spec[DatabaseService, InputValidationError] =
     test("Create, list, update, and delete Case") {
       val effect = for {
         dbService <- ZIO.service[DatabaseService]

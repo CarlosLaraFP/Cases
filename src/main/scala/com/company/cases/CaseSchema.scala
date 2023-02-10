@@ -1,6 +1,6 @@
 package com.company.cases
 
-import ErrorModel._
+import Validation._
 import caliban.schema.Annotations.GQLDescription
 import zio.{IO, Task}
 import zio.stream.ZStream
@@ -31,21 +31,21 @@ case class CaseStatusChanged(
 
 final case class Queries(
   @GQLDescription("List all cases with a specific status and optional created date")
-  listCases: ListCases => Task[List[Case]]
+  listCases: ListCases => Result[List[Case]]
 )
 
 final case class Mutations(
   @GQLDescription("Create or delete cases table")
-  modifyTable: ModifyTable => Task[Mutation],
+  modifyTable: ModifyTable => Result[Mutation],
 
   @GQLDescription("Create a new case")
   createCase: CreateCase => Result[Mutation],
 
   @GQLDescription("Update the status of a case")
-  updateCase: UpdateCase => Task[Mutation],
+  updateCase: UpdateCase => Result[Mutation],
 
   @GQLDescription("Delete a case based on UUID")
-  deleteCase: DeleteCase => Task[Mutation]
+  deleteCase: DeleteCase => Result[Mutation]
 )
 
 final case class Subscriptions(

@@ -1,6 +1,7 @@
 package com.company.cases
 
-import ErrorModel._
+import Validation._
+import TableAction._
 
 import caliban.RootResolver
 import doobie.Transactor
@@ -59,138 +60,121 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
       dbConfig.password // password
     )
 
-  def modifyTable(modifyTable: ModifyTable): Task[Mutation] = {
-    val result = modifyTable.action match {
-      case TableAction.Create =>
-        connection
-          .trans
-          .apply(
-            sql"""
-            CREATE TABLE "Case" (
-              id UUID NOT NULL,
-              name TEXT NOT NULL,
-              dateOfBirth DATE NOT NULL,
-              dateOfDeath DATE,
-              status TEXT NOT NULL,
-              created TIMESTAMP NOT NULL,
-              statusChange TIMESTAMP NOT NULL,
-              PRIMARY KEY (id)
-            );
-          """.update.run)
-
-      case TableAction.Delete =>
-        connection
-          .trans
-          .apply(
-            sql"""
-             DROP TABLE "Case";
-            """.update.run
-          )
-
-      case TableAction.Clear =>
-        connection
-          .trans
-          .apply(
-            sql"""
-               DELETE FROM "Case";
-              """.update.run
-          )
+  def modifyTable(args: ModifyTable): Result[Mutation] = {
+    val postgresQuery = args.action match {
+      case Create =>
+        sql"""
+          CREATE TABLE "Case" (
+            id UUID NOT NULL,
+            name TEXT NOT NULL,
+            dateOfBirth DATE NOT NULL,
+            dateOfDeath DATE,
+            status TEXT NOT NULL,
+            created TIMESTAMP NOT NULL,
+            statusChange TIMESTAMP NOT NULL,
+            PRIMARY KEY (id)
+          );
+        """
+      case Delete =>
+        sql"""
+          DROP TABLE "Case";
+        """
+      case Clear =>
+        sql"""
+          DELETE FROM "Case";
+        """
     }
-    result
-      .map(_ =>
-        Mutation(s"${modifyTable.action} successful", None, None)
-      )
-      .catchAll(e => ZIO.attempt {
-        Mutation(s"Doobie ${modifyTable.action} table error: ${e.getMessage}", None, None)
-      })
-  }
-
-  def createCase(args: CreateCase): Result[Mutation] =
-      for {
-        newCase <- ZIO.fromEither(validateCreateCase(args).toEither)
-        _ <- connection // doobie.postgres.implicits._ for automatic casts
-        .trans
-        .apply(
-          sql"""
-            INSERT INTO "Case" (id, name, dateOfBirth, dateOfDeath, status, created, statusChange)
-            VALUES (
-              ${newCase.id},
-              ${newCase.name},
-              ${newCase.dateOfBirth},
-              ${newCase.dateOfDeath},
-              ${newCase.status.toString},
-              ${newCase.created},
-              ${newCase.statusChange}
-            );
-            """
-            .update
-            .run
-        )
-        .mapError(e => InputValidationError(e.getMessage))
-      } yield Mutation(
-        s"Case ${newCase.name} inserted successfully.",
-        Some(newCase.id.toString),
-        Some(newCase.status)
-      )
-
-  // TODO: functional streaming library fs2 to use Stream instead of List to avoid potential OOM runtime exception
-  def listCases(args: ListCases): Task[List[Case]] =
     connection
       .trans
       .apply(
+        postgresQuery
+          .update
+          .run
+      )
+      .map(_ => Mutation(s"${args.action} successful", None, None))
+      .mapError(e => InputValidationError(e.getMessage))
+  }
+
+  def createCase(args: CreateCase): Result[Mutation] =
+    for {
+      newCase <- ZIO.fromEither(validateCreateCase(args).toEither)
+      _ <- connection // doobie.postgres.implicits._ for automatic casts
+      .trans
+      .apply(
         sql"""
+          INSERT INTO "Case" (id, name, dateOfBirth, dateOfDeath, status, created, statusChange)
+          VALUES (
+            ${newCase.id},
+            ${newCase.name},
+            ${newCase.dateOfBirth},
+            ${newCase.dateOfDeath},
+            ${newCase.status.toString},
+            ${newCase.created},
+            ${newCase.statusChange}
+          );
+          """
+          .update
+          .run
+      )
+      .mapError(e => InputValidationError(e.getMessage))
+    } yield Mutation(
+      s"Case ${newCase.name} inserted successfully.",
+      Some(newCase.id.toString),
+      Some(newCase.status)
+    )
+
+  // TODO: functional streaming library fs2 to use Stream instead of List to avoid potential OOM runtime exception
+  def listCases(args: ListCases): Result[List[Case]] =
+    for {
+      _ <- ZIO.fromEither(validateListCases(args).toEither)
+      cases <- connection
+        .trans
+        .apply(
+          sql"""
           SELECT id, name, dateOfBirth, dateOfDeath, status, created, statusChange
           FROM "Case"
           WHERE status = ${args.status.toString}
         """
-          .query[Case]
-          .to[List]
-      )
-  // Caliban's Executor is expecting a Throwable to be returned
+            .query[Case]
+            .to[List]
+        )
+        .mapError(e => InputValidationError(e.getMessage))
+    } yield cases
 
-  def updateCase(args: UpdateCase): Task[Mutation] = {
-    // Later: cats.data to build non-monadic string
-    val updateEffect = connection
-      .trans
-      .apply(
-        sql"""
-          UPDATE "Case"
-          SET
-            status = ${args.status.toString},
-            statusChange = ${Instant.now}
-          WHERE id = ${args.id};
-          """
-          .update.run
-      )
-      .map(_ =>
-        Mutation(s"Status ${args.status} applied successfully.", Some(args.id.toString), Some(args.status))
-      )
-    // When a case status changes, an appropriate message should be published by the API to some "external" service.
+  def updateCase(args: UpdateCase): Result[Mutation] =
     for {
-      result <- updateEffect
-      event = CaseStatusChanged(args.id, args.status)
+      _ <- connection
+        .trans
+        .apply(
+          sql"""
+            UPDATE "Case"
+            SET
+              status = ${args.status.toString},
+              statusChange = ${Instant.now}
+            WHERE id = ${args.id};
+          """
+            .update
+            .run
+        )
+        .mapError(e => InputValidationError(e.getMessage))
       _ <- hub
-        .publish(event)
+        .publish(CaseStatusChanged(args.id, args.status))
         .forkDaemon
-    } yield result
-  }
+    } yield Mutation(s"Status ${args.status} applied successfully.", Some(args.id.toString), Some(args.status))
 
-  def deleteCase(args: DeleteCase): Task[Mutation] =
+  def deleteCase(args: DeleteCase): Result[Mutation] =
     connection
       .trans
       .apply(
         sql"""
           DELETE FROM "Case"
           WHERE id = ${args.id};
-          """
-          .update.run
+        """
+          .update
+          .run
       )
-      .map(_ =>
-        Mutation(s"Case deleted successfully.", Some(args.id.toString), None)
-      )
-      .catchAll(e => ZIO.attempt {
-        Mutation(s"Failure: ${e.getMessage}", Some(args.id.toString), None)
-      })
+      .map(_ => Mutation(s"Case deleted successfully.", Some(args.id.toString), None))
+      .mapError(e => InputValidationError(e.getMessage))
 }
 object DatabaseService {
   private def create(config: PostgresConfig, hub: Hub[CaseStatusChanged]): DatabaseService =
@@ -220,7 +204,7 @@ class ExternalService(retryAttemptsLimit: Int, hub: Hub[CaseStatusChanged]) {
       .fromHub(hub)
       .tap(publishMessage)
 
-  // Testing a side-effect in the server, but the ZStream events are meant for client delivery (through WebSocket)
+  // Testing a side-effect in the server, but the ZStream events are meant for GraphQL client delivery (through WebSocket)
   def publishMessage(caseStatusChanged: CaseStatusChanged): Task[String] =
     Random
       .nextBoolean

@@ -21,7 +21,7 @@ mutation{
 }
 
 mutation{
-  updateCase(id: "INSERT_UUID", status: Submitted){
+  updateCase(id: "faf319eb-691e-4cb5-8a0f-a534c485e0df", status: Submitted){
     result
     caseId
   }
