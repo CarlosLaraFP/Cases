@@ -1,8 +1,11 @@
 package com.company.cases
 
+import caliban.CalibanError.ExecutionError
+import caliban.schema.Schema
 import cats.Semigroup
 import cats.data.Validated
-import cats.implicits._
+import cats.syntax.semigroup._
+import zio.IO
 
 import java.time.{Instant, LocalDate}
 import java.util.UUID
@@ -10,25 +13,26 @@ import scala.util.Try
 
 object ErrorModel {
 
-  import cats.implicits._
-
-  implicit val combineStringErrors: Semigroup[IllegalArgumentException] =
-    Semigroup.instance[IllegalArgumentException] {
-      (a, b) => new IllegalArgumentException(a.getMessage + " | " + b.getMessage)
+  implicit val combineStringErrors: Semigroup[String] =
+    Semigroup.instance[String] {
+      (a, b) => a + " | " + b
     }
 
-  type InputValidation[T] = Validated[IllegalArgumentException, T]
+  implicit def customEffectSchema[A](implicit s: Schema[Any, A]): Schema[Any, IO[String, A]] =
+    Schema.customErrorEffectSchema((message: String) => ExecutionError(message))
+
+  type InputValidation[T] = Validated[String, T]
 
   private def nameValidation(name: String): InputValidation[String] =
-    Validated.cond(name.nonEmpty, name, new IllegalArgumentException("Name must not be blank."))
-      .combine(Validated.cond(name.length < 100, name, new IllegalArgumentException("Name must be less than 100 characters.")))
+    Validated.cond(name.nonEmpty, name, "Name must not be blank.")
+      .combine(Validated.cond(name.length < 100, name, "Name must be less than 100 characters."))
 
   private def dateValidation(date: Option[String]): InputValidation[String] =
     if (date.isEmpty) Validated.valid("")
     else Validated
       .fromTry(Try(LocalDate.parse(date.get).toString))
       .leftMap(e =>
-        new IllegalArgumentException(s"${e.getMessage} -> ISO 8601 standard date format yyyy-MM-dd required.")
+        s"${e.getMessage} -> ISO 8601 standard date format yyyy-MM-dd required."
       )
 
   def validateCreateCase(args: CreateCase): InputValidation[Case] =

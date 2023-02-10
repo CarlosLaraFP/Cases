@@ -1,6 +1,8 @@
 package com.company.cases
 
+import caliban.CalibanError.ExecutionError
 import caliban.schema.Annotations.GQLDescription
+import caliban.schema.Schema
 import zio.{IO, Task}
 import zio.stream.ZStream
 
@@ -38,7 +40,7 @@ final case class Mutations(
   modifyTable: ModifyTable => Task[MutationResult],
 
   @GQLDescription("Create a new case")
-  createCase: CreateCase => Task[MutationResult],
+  createCase: CreateCase => IO[String, MutationResult],
 
   @GQLDescription("Update the status of a case")
   updateCase: UpdateCase => Task[MutationResult],

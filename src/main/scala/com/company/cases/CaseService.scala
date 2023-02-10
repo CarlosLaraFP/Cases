@@ -104,25 +104,28 @@ class DatabaseService(dbConfig: PostgresConfig, hub: Hub[CaseStatusChanged]) {
       })
   }
 
-  def createCase(args: CreateCase): Task[MutationResult] =
+  def createCase(args: CreateCase): IO[String, MutationResult] =
       for {
         newCase <- ZIO.fromEither(validateCreateCase(args).toEither)
         _ <- connection // doobie.postgres.implicits._ for automatic casts
         .trans
         .apply(
-        sql"""
-                INSERT INTO "Case" (id, name, dateOfBirth, dateOfDeath, status, created, statusChange)
-                VALUES (
-                  ${newCase.id},
-                  ${newCase.name},
-                  ${newCase.dateOfBirth},
-                  ${newCase.dateOfDeath},
-                  ${newCase.status.toString},
-                  ${newCase.created},
-                  ${newCase.statusChange}
-                );
-                """.update.run
+          sql"""
+            INSERT INTO "Case" (id, name, dateOfBirth, dateOfDeath, status, created, statusChange)
+            VALUES (
+              ${newCase.id},
+              ${newCase.name},
+              ${newCase.dateOfBirth},
+              ${newCase.dateOfDeath},
+              ${newCase.status.toString},
+              ${newCase.created},
+              ${newCase.statusChange}
+            );
+            """
+            .update
+            .run
         )
+        .mapError(_.getMessage)
       } yield MutationResult(
         s"Case ${newCase.name} inserted successfully.",
         Some(newCase.id.toString),
@@ -216,7 +219,7 @@ class ExternalService(retryAttemptsLimit: Int, hub: Hub[CaseStatusChanged]) {
       .fromHub(hub)
       .tap(publishMessage)
 
-  // Mocking a side-effect in the server, but the ZStream events are meant for client delivery (through WebSocket)
+  // Testing a side-effect in the server, but the ZStream events are meant for client delivery (through WebSocket)
   def publishMessage(caseStatusChanged: CaseStatusChanged): Task[String] =
     Random
       .nextBoolean
