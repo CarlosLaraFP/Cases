@@ -232,7 +232,7 @@ object ExternalService {
 }
 
 /*
-  TODO: Schedules, combinators (&&), and sequencing (++) for retry logiic
+  TODO: Schedules, combinators (&&), and sequencing (++) for retry logic
     - once
     - recurs(Int) - retries n times and returns the first success or the last failure
     - spaced(Duration) - retries every n.seconds until a success is returned

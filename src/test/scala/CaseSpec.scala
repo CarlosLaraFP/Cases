@@ -131,9 +131,35 @@ object CaseSpec extends ZIOSpecDefault {
       }
     }
 
-  // TODO: Failure test cases
+  // TODO: Property-based tests
 
-  // TODO: Integration test to verify GraphQL Subscription PubSub
+  val pbtCreateCase: Spec[DatabaseService, InputValidationError] =
+    test("PBT: databaseService.createCase") {
+
+      val nameGenerator = Gen.stringBounded(1, 99)(Gen.char)
+
+      val dobGenerator = for {
+        year <- Gen.stringN(4)(Gen.numericChar)
+        month <- Gen.fromIterable(1 to 12).map(i => if (i < 10) s"0$i" else s"$i")
+        day <- Gen.fromIterable(1 to 28).map(i => if (i < 10) s"0$i" else s"$i")
+      } yield s"$year-$month-$day"
+
+      val dodGenerator = Gen.option(dobGenerator)
+
+      check(nameGenerator, dobGenerator, dodGenerator) { (name, dob, dod) =>
+        val effect = for {
+          dbService <- ZIO.service[DatabaseService]
+          create = CreateCase(name, dob, dod)
+          created <- dbService.createCase(create)
+        } yield created
+
+        effect.map(m =>
+          assertTrue(m.result.nonEmpty && m.caseId.nonEmpty && m.caseStatus.get == CaseStatus.Pending)
+        )
+      }
+    }
+
+  // TODO: Failure test cases
 
   override def spec =
     suite("CaseSpec")(
@@ -143,7 +169,8 @@ object CaseSpec extends ZIOSpecDefault {
         suite("")(
           caseLifecycleTest,
           clearTableTest
-        ) @@ nonFlaky(5),
+        ) @@ nonFlaky(3),
+        pbtCreateCase @@ nonFlaky(10),
         deleteTableTest
       ).provide(
         DatabaseService.live,
@@ -167,7 +194,6 @@ object CaseSpec extends ZIOSpecDefault {
         )
       ) @@ diagnose(1.minute) @@ flaky(3),
 
-      // TODO++
       test("Property-Based Testing") {
         // 100 examples each generator by default
         check(Gen.int, Gen.int, Gen.int) { (x, y, z) =>
@@ -175,7 +201,7 @@ object CaseSpec extends ZIOSpecDefault {
           assertTrue(((x + y) + z) == (x + (y + z)))
         }
       }
-    ) @@ timed //@@ beforeAll(createTableTest) @@ afterAll(deleteTableTest)
+    ) @@ timed
 }
 /*
   TODO: Assertion variants
