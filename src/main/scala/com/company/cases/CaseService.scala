@@ -11,15 +11,10 @@ import doobie.postgres._
 import doobie.postgres.implicits._
 import zio._
 import zio.stream.ZStream
-
-import scala.util.Try
 // provides the necessary implicit conversion from doobie.Transactor to zio.Task
 import zio.interop.catz._
 import zio.interop.catz.implicits._
-import cats.data.Validated
-import cats.implicits._
 import java.time._
-import java.util.UUID
 
 
 class CaseService(databaseService: DatabaseService, externalService: ExternalService) {

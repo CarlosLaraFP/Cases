@@ -66,6 +66,3 @@ object CaseStatus {
   case object Deficient extends CaseStatus
   case object Submitted extends CaseStatus
 }
-
-// TODO: Domain error modeling (Caliban FAQ)
-sealed trait InputError

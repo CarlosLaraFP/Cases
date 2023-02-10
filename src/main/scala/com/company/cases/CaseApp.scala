@@ -1,5 +1,4 @@
 package com.company.cases
-
 /*
  Caliban requires implicit Schema(s) in scope at compile time to handle generic IO effects
  (otherwise, apiInterpreter.mapError(_.getCause) to surface exceptions to users)
@@ -45,9 +44,7 @@ object CaseApp extends ZIOAppDefault {
     app.provide(
       CaseService.live,
       DatabaseService.live,
-      ExternalService.live(
-        10
-      ),
+      ExternalService.live(10),
       ZLayer.fromZIO(
         Hub.unbounded[CaseStatusChanged]
       ),

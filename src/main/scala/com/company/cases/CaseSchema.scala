@@ -2,7 +2,6 @@ package com.company.cases
 
 import Validation._
 import caliban.schema.Annotations.GQLDescription
-import zio.{IO, Task}
 import zio.stream.ZStream
 
 import java.util.UUID
@@ -10,7 +9,6 @@ import java.util.UUID
 /*
   We use the Caliban library to define the GraphQL schema, which has a built-in facility to generate the schema from our Scala data types.
   API input should be a date string format that GraphQL understands, such as the ISO 8601 standard date format yyyy-MM-dd.
-  // TODO: cats.data.Validated for args++
  */
 case class ListCases(status: CaseStatus, created: Option[String])
 case class CreateCase(name: String, dateOfBirth: String, dateOfDeath: Option[String])
@@ -23,7 +21,11 @@ object TableAction {
   case object Delete extends TableAction
   case object Clear extends TableAction
 }
-case class Mutation(result: String, caseId: Option[String], caseStatus: Option[CaseStatus])
+case class Mutation(
+  result: String,
+  caseId: Option[String],
+  caseStatus: Option[CaseStatus]
+)
 case class CaseStatusChanged(
   id: UUID,
   status: CaseStatus

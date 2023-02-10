@@ -10,7 +10,6 @@ import zio.IO
 import java.time.{Instant, LocalDate}
 import java.util.UUID
 import scala.util.Try
-import CaseStatus._
 
 case class InputValidationError(message: String)
 object InputValidationError {

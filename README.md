@@ -37,12 +37,11 @@ When you are done:
 
 # Next Steps
 
-* Add cats.data (with ZIO interop) to validate API inputs
+* Improve domain model through functional domain-driven design
 * Add property-based testing
 * Increase unit and integration test coverage, including failure test cases
 * Use zio-config to extract configuration values from environment variables
 * Improve 'updateCase' API to allow Case changes beyond CaseStatus
 * Use functional streaming library fs2 for the 'listCases' API
-* Add domain error model (https://ghostdogpr.github.io/caliban/faq/)
 * Deploy GraphQL API as a serverless microservice (CodePipeline, CodeBuild, Docker, ECR, ALB -> ECS/EKS Fargate with horizontal auto-scaling, SQS)
 * GraphQL API load testing to determine service stability as concurrency and RPS increase
