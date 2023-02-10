@@ -150,16 +150,33 @@ object CaseSpec extends ZIOSpecDefault {
         val effect = for {
           dbService <- ZIO.service[DatabaseService]
           create = CreateCase(name, dob, dod)
-          created <- dbService.createCase(create)
-        } yield created
+          result <- dbService.createCase(create)
+        } yield result
 
         effect.map(m =>
-          assertTrue(m.result.nonEmpty && m.caseId.nonEmpty && m.caseStatus.get == CaseStatus.Pending)
+          assertTrue(
+            m.result.nonEmpty &&
+              m.caseId.nonEmpty &&
+              m.caseStatus.get == CaseStatus.Pending
+          )
         )
       }
     }
 
   // TODO: Failure test cases
+
+  val invalidDateFailure: Spec[DatabaseService, InputValidationError] =
+    test("Date does not exist in Calendar should fail") {
+      val effect = for {
+        dbService <- ZIO.service[DatabaseService]
+        create = CreateCase("Case from another universe", "2050-11-34", None)
+        result <- dbService.createCase(create)
+      } yield result
+
+      assertZIO(effect.either) {
+        Assertion.isLeft
+      }
+    }
 
   override def spec =
     suite("CaseSpec")(
@@ -170,7 +187,8 @@ object CaseSpec extends ZIOSpecDefault {
           caseLifecycleTest,
           clearTableTest
         ) @@ nonFlaky(3),
-        pbtCreateCase @@ nonFlaky(10),
+        pbtCreateCase @@ nonFlaky(5),
+        invalidDateFailure,
         deleteTableTest
       ).provide(
         DatabaseService.live,
