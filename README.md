@@ -39,6 +39,7 @@ When you are done:
 
 * Improve domain model through functional domain-driven design
 * Increase property-based unit and integration testing, including failure test cases
+* Add proactive retry to extend sequential retry (distributed systems best practices from AWS)
 * Use zio-config to extract configuration values from environment variables
 * Improve 'updateCase' API to allow Case changes beyond CaseStatus
 * Use functional streaming library fs2 for the 'listCases' API
