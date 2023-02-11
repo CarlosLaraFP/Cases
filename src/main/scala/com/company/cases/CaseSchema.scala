@@ -36,7 +36,6 @@ final case class Queries(
   @GQLDescription("List all cases with a specific status and optional created date")
   listCases: ListCases => Result[Vector[Case]]
 )
-
 final case class Mutations(
   @GQLDescription("Create or delete cases table")
   modifyTable: ModifyTable => Result[Mutation],
@@ -50,7 +49,6 @@ final case class Mutations(
   @GQLDescription("Delete a case based on UUID")
   deleteCase: DeleteCase => Result[Mutation]
 )
-
 final case class Subscriptions(
   @GQLDescription("Subscribe to changes in case status")
   caseStatusChanged: ZStream[Any, Throwable, CaseStatusChanged]

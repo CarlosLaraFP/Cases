@@ -74,7 +74,6 @@ object CaseStatus {
 }
 
 object ErrorModel {
-  type Result[T] = IO[RequestError, T]
   sealed trait RequestError
   case class InputValidationError(message: String) extends RequestError
   object InputValidationError extends RequestError {
@@ -86,7 +85,9 @@ object ErrorModel {
   }
   case class PostgresError(message: String, sql: String) extends RequestError
 
-  implicit def customEffectSchema[A](implicit s: Schema[Any, A]): Schema[Any, IO[RequestError, A]] =
+  type Result[T] = IO[RequestError, T]
+
+  implicit def customEffectSchema[A](implicit s: Schema[Any, A]): Schema[Any, Result[A]] =
     Schema.customErrorEffectSchema {
       case InputValidationError(message) => ExecutionError(message)
       case PostgresError(message, sql) =>
