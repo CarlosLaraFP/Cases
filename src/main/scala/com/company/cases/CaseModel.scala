@@ -76,7 +76,7 @@ object CaseStatus {
 object ErrorModel {
   sealed trait RequestError
   case class InputValidationError(message: String) extends RequestError
-  object InputValidationError extends RequestError {
+  object InputValidationError {
     implicit val validationCombinator: Semigroup[InputValidationError] =
       Semigroup.instance[InputValidationError] {
         (errorA, errorB) =>
