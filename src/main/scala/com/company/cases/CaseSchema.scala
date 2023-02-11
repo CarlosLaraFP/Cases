@@ -1,6 +1,6 @@
 package com.company.cases
 
-import Validation._
+import ErrorModel._
 
 import caliban.schema.Annotations.GQLDescription
 import zio.stream.ZStream

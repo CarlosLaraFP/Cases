@@ -47,4 +47,4 @@ If the GraphQL [publisher] web service goes down or becomes unavailable,
    the GraphQL [subscriber] client simply stops receiving events.
 
 Interestingly, an active subscription by an external client is necessary to see the tap effects.
-What happens to the "lost" events that were successfully published during a time without a subscribed client?
+If any events are published during a time without an active client subscription, the events get dropped (no buffering).

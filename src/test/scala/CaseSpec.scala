@@ -1,15 +1,17 @@
+import com.company.cases._
+import com.company.cases.ErrorModel._
+
 import zio._
 import zio.test.TestAspect._
 import zio.test._
 import java.util.UUID
-import com.company.cases._
 
 
 object CaseSpec extends ZIOSpecDefault {
 
   // TODO: Unit tests
 
-  val deleteTableTest: Spec[DatabaseService, InputValidationError] =
+  val deleteTableTest: Spec[DatabaseService, RequestError] =
     test("databaseService.modifyTable with Delete") {
       val effect = for {
         dbService <- ZIO.service[DatabaseService]
@@ -24,7 +26,7 @@ object CaseSpec extends ZIOSpecDefault {
       }
     }
 
-  val createTableTest: Spec[DatabaseService, InputValidationError] =
+  val createTableTest: Spec[DatabaseService, RequestError] =
     test("databaseService.modifyTable with Create") {
       val effect = for {
         dbService <- ZIO.service[DatabaseService]
@@ -39,7 +41,7 @@ object CaseSpec extends ZIOSpecDefault {
       }
     }
 
-  val clearTableTest: Spec[DatabaseService, InputValidationError] =
+  val clearTableTest: Spec[DatabaseService, RequestError] =
     test("databaseService.modifyTable with Clear") {
       val effect = for {
         dbService <- ZIO.service[DatabaseService]
@@ -54,7 +56,7 @@ object CaseSpec extends ZIOSpecDefault {
       }
     }
 
-  val createCaseTest: Spec[DatabaseService, InputValidationError] =
+  val createCaseTest: Spec[DatabaseService, RequestError] =
     test("databaseService.createCase Mutation with Doobie") {
       val effect = for {
         dbService <- ZIO.service[DatabaseService]
@@ -69,7 +71,7 @@ object CaseSpec extends ZIOSpecDefault {
       }
     }
 
-  val listCasesTest: Spec[DatabaseService, InputValidationError] =
+  val listCasesTest: Spec[DatabaseService, RequestError] =
     test("databaseService.listCases Query with Doobie") {
       val effect = for {
         dbService <- ZIO.service[DatabaseService]
@@ -91,7 +93,7 @@ object CaseSpec extends ZIOSpecDefault {
     to perform the main case management operations.
     This test verifies that all of these interactions with the database service are working as expected.
    */
-  val caseLifecycleTest: Spec[DatabaseService, InputValidationError] =
+  val caseLifecycleTest: Spec[DatabaseService, RequestError] =
     test("Create, list, update, and delete Case") {
       val effect = for {
         dbService <- ZIO.service[DatabaseService]
@@ -133,7 +135,7 @@ object CaseSpec extends ZIOSpecDefault {
 
   // TODO: Property-based tests
 
-  val pbtCreateCase: Spec[DatabaseService, InputValidationError] =
+  val pbtCreateCase: Spec[DatabaseService, RequestError] =
     test("PBT: databaseService.createCase") {
 
       val nameGenerator = Gen.stringBounded(1, 99)(Gen.char)
@@ -165,7 +167,7 @@ object CaseSpec extends ZIOSpecDefault {
 
   // TODO: Failure test cases
 
-  val invalidDateFailure: Spec[DatabaseService, InputValidationError] =
+  val invalidDateFailure: Spec[DatabaseService, RequestError] =
     test("Date does not exist in Calendar should fail") {
       val effect = for {
         dbService <- ZIO.service[DatabaseService]

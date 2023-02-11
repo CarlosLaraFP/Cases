@@ -38,9 +38,10 @@ When you are done:
 # Next Steps
 
 * Improve domain model through functional domain-driven design
-* Increase property-based unit and integration tests, including failure test cases
+* Increase property-based unit and integration testing, including failure test cases
 * Use zio-config to extract configuration values from environment variables
 * Improve 'updateCase' API to allow Case changes beyond CaseStatus
 * Use functional streaming library fs2 for the 'listCases' API
+* Add explicit error-handling for Fiber interruptions
 * Deploy GraphQL API as a serverless microservice (CodePipeline, CodeBuild, Docker, ECR, ALB -> ECS/EKS Fargate with horizontal auto-scaling, SQS, CloudWatch)
 * GraphQL API load testing to determine service stability as concurrency and RPS increase

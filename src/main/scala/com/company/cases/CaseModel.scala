@@ -1,9 +1,14 @@
 package com.company.cases
 
+import caliban.CalibanError.ExecutionError
+import caliban.schema.Schema
 import doobie.util.{Get, Put, Read, Write}
 import doobie.implicits._
 import doobie.postgres._
 import doobie.postgres.implicits._
+import zio.IO
+import cats.Semigroup
+
 import java.time.{Instant, LocalDate}
 import java.util.UUID
 
@@ -66,4 +71,29 @@ object CaseStatus {
   case object UnderReview extends CaseStatus
   case object Deficient extends CaseStatus
   case object Submitted extends CaseStatus
+}
+
+object ErrorModel {
+  type Result[T] = IO[RequestError, T]
+  sealed trait RequestError
+  case class InputValidationError(message: String) extends RequestError
+  object InputValidationError extends RequestError {
+    implicit val validationCombinator: Semigroup[InputValidationError] =
+      Semigroup.instance[InputValidationError] {
+        (errorA, errorB) =>
+          InputValidationError(errorA.message + " | " + errorB.message)
+      }
+  }
+  case class PostgresError(message: String, sql: String) extends RequestError
+
+  implicit def customEffectSchema[A](implicit s: Schema[Any, A]): Schema[Any, IO[RequestError, A]] =
+    Schema.customErrorEffectSchema {
+      case InputValidationError(message) => ExecutionError(message)
+      case PostgresError(message, sql) =>
+        ExecutionError(
+          s"$message from SQL: $sql"
+            .replaceAll("\\s+", " ")
+            .trim
+        )
+    }
 }

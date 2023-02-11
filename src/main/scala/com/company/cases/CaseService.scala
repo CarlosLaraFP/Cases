@@ -1,7 +1,9 @@
 package com.company.cases
 
 import Validation._
+import ErrorModel._
 import TableAction._
+
 import caliban.RootResolver
 import doobie.Transactor
 import doobie.implicits._
@@ -110,10 +112,11 @@ class DatabaseService(connection: PostgresConnection, hub: Hub[CaseStatusChanged
       cases <- connection
         .executeQuery[Case](
           sql"""
-          SELECT id, name, dateOfBirth, dateOfDeath, status, created, statusChange
-          FROM "Case"
-          WHERE status = ${args.status.toString}
-        """
+            SELECT id, name, dateOfBirth, dateOfDeath, status, created, statusChange
+            FROM "Case"
+            WHERE status = ${args.status.toString}
+          """
+            .stripMargin
         )
     } yield cases
 
@@ -167,7 +170,9 @@ case class PostgresConnection(transactor: Aux[Task, Unit]) {
           .update
           .run
       )
-      .mapError(e => InputValidationError(e.getMessage))
+      .mapError(e =>
+        PostgresError(e.getMessage, fragment.query.sql)
+      )
 
   def executeQuery[T : Read](fragment: Fragment): Result[Vector[T]] =
     // requires an implicit Read[T] in scope
@@ -178,7 +183,9 @@ case class PostgresConnection(transactor: Aux[Task, Unit]) {
           .query[T]
           .to[Vector]
       )
-      .mapError(e => InputValidationError(e.getMessage))
+      .mapError(e =>
+        PostgresError(e.getMessage, fragment.query.sql)
+      )
 }
 object PostgresConnection {
   private def create(driver: String, url: String, user: String, password: String): PostgresConnection =

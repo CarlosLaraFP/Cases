@@ -1,33 +1,17 @@
 package com.company.cases
 
-import caliban.CalibanError.ExecutionError
-import caliban.schema.Schema
-import cats.Semigroup
+import ErrorModel._
+
 import cats.data.Validated
 import cats.syntax.semigroup._
-import zio.IO
 
 import java.time.{Instant, LocalDate}
 import java.util.UUID
 import scala.util.Try
 
-case class InputValidationError(message: String)
-object InputValidationError {
-
-  implicit val validationCombinator: Semigroup[InputValidationError] =
-    Semigroup.instance[InputValidationError] {
-      (errorA, errorB) =>
-        InputValidationError(errorA.message + " | " + errorB.message)
-    }
-
-  implicit def customEffectSchema[A](implicit s: Schema[Any, A]): Schema[Any, IO[InputValidationError, A]] =
-    Schema.customErrorEffectSchema((error: InputValidationError) => ExecutionError(error.message))
-}
 
 object Validation {
-
   type InputValidation[T] = Validated[InputValidationError, T]
-  type Result[T] = IO[InputValidationError, T]
 
   private def nameValidation(name: String): InputValidation[String] =
     Validated.cond(name.nonEmpty, name, InputValidationError("Name must not be blank."))
@@ -77,6 +61,4 @@ object Validation {
           Instant.now
         )
       )
-
-
 }
