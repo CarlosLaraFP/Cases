@@ -87,7 +87,9 @@ object ErrorModel {
 
   type Result[T] = IO[RequestError, T]
 
-  implicit def customEffectSchema[A](implicit s: Schema[Any, A]): Schema[Any, Result[A]] =
+  type CustomSchema[T] = Schema[Any, T]
+  implicit def customEffectSchema[A : CustomSchema]: CustomSchema[Result[A]] =
+    // requires an implicit Schema[Any, A] in scope
     Schema.customErrorEffectSchema {
       case InputValidationError(message) => ExecutionError(message)
       case PostgresError(message, sql) =>
