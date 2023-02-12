@@ -45,20 +45,24 @@ object Validation {
         )
       )
 
-  def validateListCases(args: ListCases): InputValidation[Unit] =
-    instantValidation(args.created).map(_ => ())
+  implicit class ValidateListCases(args: ListCases) {
+    def validate: InputValidation[Unit] =
+      instantValidation(args.created).map(_ => ())
+  }
 
-  def validateCreateCase(args: CreateCase): InputValidation[Case] =
-    (nameValidation(args.name) |+| dateValidation(Some(args.dateOfBirth)) |+| dateValidation(args.dateOfDeath))
-      .map(_ =>
-        Case(
-          UUID.randomUUID,
-          args.name,
-          LocalDate.parse(args.dateOfBirth),
-          if (args.dateOfDeath.nonEmpty) Some(LocalDate.parse(args.dateOfDeath.get)) else Option.empty[LocalDate],
-          CaseStatus.Pending, // a new Case starts Pending
-          Instant.now,
-          Instant.now
+  implicit class ValidateCreateCase(args: CreateCase) {
+    def validate: InputValidation[Case] =
+      (nameValidation(args.name) |+| dateValidation(Some(args.dateOfBirth)) |+| dateValidation(args.dateOfDeath))
+        .map(_ =>
+          Case(
+            UUID.randomUUID,
+            args.name,
+            LocalDate.parse(args.dateOfBirth),
+            if (args.dateOfDeath.nonEmpty) Some(LocalDate.parse(args.dateOfDeath.get)) else Option.empty[LocalDate],
+            CaseStatus.Pending, // a new Case starts Pending
+            Instant.now,
+            Instant.now
+          )
         )
-      )
+  }
 }

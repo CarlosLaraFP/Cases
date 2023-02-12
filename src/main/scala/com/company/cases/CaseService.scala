@@ -83,7 +83,7 @@ class DatabaseService(connection: PostgresConnection, hub: Hub[CaseStatusChanged
 
   def createCase(args: CreateCase): Result[Mutation] =
     for {
-      newCase <- ZIO.fromEither(validateCreateCase(args).toEither)
+      newCase <- ZIO.fromEither(args.validate.toEither)
       _ <- connection
         .executeMutation(
           sql"""
@@ -97,7 +97,7 @@ class DatabaseService(connection: PostgresConnection, hub: Hub[CaseStatusChanged
               ${newCase.created},
               ${newCase.statusChange}
             );
-            """
+          """
         )
     } yield Mutation(
       s"Case ${newCase.name} inserted successfully.",
@@ -108,7 +108,7 @@ class DatabaseService(connection: PostgresConnection, hub: Hub[CaseStatusChanged
   def listCases(args: ListCases): Result[Vector[Case]] =
     // TODO: functional streaming library fs2 to use Stream instead of List to avoid potential OOM runtime exception
     for {
-      _ <- ZIO.fromEither(validateListCases(args).toEither)
+      _ <- ZIO.fromEither(args.validate.toEither)
       cases <- connection
         .executeQuery[Case](
           sql"""
