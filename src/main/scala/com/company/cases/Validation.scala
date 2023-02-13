@@ -59,14 +59,15 @@ object Validation {
         .bimap(e =>
           InputValidationError(
             s"""
-               |${e.getMessage} -> ISO-8601 format yyyy-MM-ddTHH:mm:ss.SSSZ required for $argName:
-               |
-               |THH:mm:ss.SSS represents the time of day, with hours, minutes, seconds, and fractional seconds.
-               |Z represents the time zone offset, either Z for UTC, or ±HH:mm for an offset in hours and minutes.
-               |
-               |For example, the string 2022-12-03T10:15:30.000Z represents the Instant corresponding to December 3rd, 2022 at 10:15:30 AM UTC.
-               |For PST, the format is 2022-12-03T10:15:30.000-08:00 (same approach for other dates based on UTC offset).
-               |""".stripMargin
+             |${e.getMessage} -> ISO-8601 format yyyy-MM-ddTHH:mm:ss.SSSZ required for $argName:
+             |
+             |THH:mm:ss.SSS represents the time of day, with hours, minutes, seconds, and fractional seconds.
+             |Z represents the time zone offset, either Z for UTC, or ±HH:mm for an offset in hours and minutes.
+             |
+             |For example, the string 2022-12-03T10:15:30.000Z represents the Instant corresponding to December 3rd, 2022 at 10:15:30 AM UTC.
+             |For PST, the format is 2022-12-03T10:15:30.000-08:00 (same approach for other dates based on UTC offset).
+             |"""
+              .stripMargin
           ),
           _ => ()
         )

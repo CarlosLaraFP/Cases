@@ -47,7 +47,6 @@ object CaseService {
     ZLayer.fromFunction(create _)
 }
 
-case class ConnectionPool(limit: Int)
 class DatabaseService(connection: PostgresTransactor, hub: Hub[CaseStatusChanged]) {
   // Using Doobie with ZIO Cats Effect 3 interop to interact with PostgreSQL
   // doobie.postgres.implicits._ for automatic casts
@@ -76,7 +75,9 @@ class DatabaseService(connection: PostgresTransactor, hub: Hub[CaseStatusChanged
         """
     }
     connection
-      .executeMutation(postgresQuery)
+      .executeMutation(
+        postgresQuery.stripMargin
+      )
       .map(_ =>
         Mutation(s"${args.action} successful", None, None)
       )
@@ -99,6 +100,7 @@ class DatabaseService(connection: PostgresTransactor, hub: Hub[CaseStatusChanged
               ${newCase.statusChange}
             );
           """
+            .stripMargin
         )
     } yield Mutation(
       s"Case ${newCase.name} inserted successfully.",
@@ -108,18 +110,14 @@ class DatabaseService(connection: PostgresTransactor, hub: Hub[CaseStatusChanged
 
   def listCases(args: ListCases): Result[Vector[Case]] =
     // TODO: functional streaming library fs2 to use Stream instead of List to avoid potential OOM runtime exception
-    for {
-      _ <- args.validate
-      cases <- connection
-        .executeQuery[Case](
-          sql"""
-            SELECT id, name, dateOfBirth, dateOfDeath, status, created, statusChange
-            FROM "Case"
-            WHERE status = ${args.status.toString}
-          """
-            .stripMargin
-        )
-    } yield cases
+    args.validate *> connection.executeQuery[Case] {
+      sql"""
+        SELECT id, name, dateOfBirth, dateOfDeath, status, created, statusChange
+        FROM "Case"
+        WHERE status = ${args.status.toString}
+      """
+        .stripMargin
+    }
 
   def updateCase(args: UpdateCase): Result[Mutation] =
     for {
@@ -132,6 +130,7 @@ class DatabaseService(connection: PostgresTransactor, hub: Hub[CaseStatusChanged
               statusChange = ${Instant.now}
             WHERE id = ${args.id};
           """
+            .stripMargin
         )
       _ <- hub
         .publish(CaseStatusChanged(args.id, args.status))
@@ -149,6 +148,7 @@ class DatabaseService(connection: PostgresTransactor, hub: Hub[CaseStatusChanged
           DELETE FROM "Case"
           WHERE id = ${args.id};
         """
+          .stripMargin
       )
       .map(_ =>
         Mutation(s"Case deleted successfully.", Some(args.id.toString), None)
