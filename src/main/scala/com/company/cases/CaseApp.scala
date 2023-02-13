@@ -48,7 +48,7 @@ object CaseApp extends ZIOAppDefault {
       ZLayer.fromZIO(
         Hub.unbounded[CaseStatusChanged]
       ),
-      PostgresConnection.live(
+      PostgresTransactor.live(
         "org.postgresql.Driver",
         "jdbc:postgresql://localhost:5432/casesdb",
         "postgres",

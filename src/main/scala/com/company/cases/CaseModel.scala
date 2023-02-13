@@ -73,9 +73,9 @@ object CaseStatus {
   case object Submitted extends CaseStatus
 }
 
-//sealed trait ErrorModel
-object ErrorModel {
-  sealed trait RequestError
+sealed trait RequestError
+object RequestError {
+  case class PostgresError(message: String, sql: String) extends RequestError
   case class InputValidationError(message: String) extends RequestError
   object InputValidationError {
     implicit val validationMonoid: Monoid[InputValidationError] =
@@ -87,10 +87,7 @@ object ErrorModel {
           )
       )
   }
-  case class PostgresError(message: String, sql: String) extends RequestError
-
   type Result[T] = IO[RequestError, T]
-
   type CustomSchema[T] = Schema[Any, T]
   // required by Caliban to replace Throwable error channel
   implicit def customEffectSchema[A : CustomSchema]: CustomSchema[Result[A]] =

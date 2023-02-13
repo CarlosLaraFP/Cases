@@ -1,6 +1,6 @@
 package com.company.cases
 
-import ErrorModel._
+import RequestError._
 
 import cats.data.Validated
 import cats.syntax.semigroup._
@@ -10,12 +10,12 @@ import java.time.{Instant, LocalDate}
 import java.util.UUID
 import scala.util.Try
 
-/*
-  ZIO parallel combinators automatically run effects on separate Fibers, including handling interruptions.
- */
 
 sealed trait Validation
 object Validation {
+  /*
+    ZIO parallel combinators automatically run effects on separate Fibers, including handling interruptions.
+   */
   type ArgumentValidation[T] = UIO[Validated[InputValidationError, T]]
   type InputValidation[T] = IO[InputValidationError, T]
 
@@ -38,20 +38,20 @@ object Validation {
       }
     }
 
-  private def dateValidation(date: Option[String]): ArgumentValidation[Unit] =
+  private def dateValidation(date: Option[String], argName: String): ArgumentValidation[Unit] =
     ZIO.succeed {
       if (date.isEmpty) Validated.valid(())
       else Validated
         .fromTry(Try(LocalDate.parse(date.get).toString))
         .bimap(e =>
           InputValidationError(
-            s"${e.getMessage} -> ISO-8601 standard date format yyyy-MM-dd required."
+            s"${e.getMessage} -> ISO-8601 standard date format yyyy-MM-dd required for $argName."
           ),
           _ => ()
         )
     }
 
-  private def instantValidation(instant: Option[String]): ArgumentValidation[Unit] =
+  private def instantValidation(instant: Option[String], argName: String): ArgumentValidation[Unit] =
     ZIO.succeed {
       if (instant.isEmpty) Validated.valid(())
       else Validated
@@ -59,7 +59,7 @@ object Validation {
         .bimap(e =>
           InputValidationError(
             s"""
-               |${e.getMessage} -> ISO-8601 format yyyy-MM-ddTHH:mm:ss.SSSZ required:
+               |${e.getMessage} -> ISO-8601 format yyyy-MM-ddTHH:mm:ss.SSSZ required for $argName:
                |
                |THH:mm:ss.SSS represents the time of day, with hours, minutes, seconds, and fractional seconds.
                |Z represents the time zone offset, either Z for UTC, or ±HH:mm for an offset in hours and minutes.
@@ -75,7 +75,7 @@ object Validation {
   implicit class ValidateListCases(args: ListCases) {
     def validate: InputValidation[Unit] =
       for {
-        validated <- instantValidation(args.created)
+        validated <- instantValidation(args.created, "Created")
         _ <- ZIO.fromEither(validated.toEither)
       } yield ()
   }
@@ -85,8 +85,8 @@ object Validation {
       Vector(
         stringValidation(args.name, "Name", NonEmptyString),
         stringValidation(args.name, "Name", StringLength),
-        dateValidation(Some(args.dateOfBirth)),
-        dateValidation(args.dateOfDeath)
+        dateValidation(Some(args.dateOfBirth), "DateOfBirth"),
+        dateValidation(args.dateOfDeath, "DateOfDeath")
       )
 
     private def createCase: Case =

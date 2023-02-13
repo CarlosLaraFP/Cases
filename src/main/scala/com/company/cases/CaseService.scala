@@ -1,7 +1,7 @@
 package com.company.cases
 
 import Validation._
-import ErrorModel._
+import RequestError._
 import TableAction._
 
 import caliban.RootResolver
@@ -47,7 +47,8 @@ object CaseService {
     ZLayer.fromFunction(create _)
 }
 
-class DatabaseService(connection: PostgresConnection, hub: Hub[CaseStatusChanged]) {
+case class ConnectionPool(limit: Int)
+class DatabaseService(connection: PostgresTransactor, hub: Hub[CaseStatusChanged]) {
   // Using Doobie with ZIO Cats Effect 3 interop to interact with PostgreSQL
   // doobie.postgres.implicits._ for automatic casts
   def modifyTable(args: ModifyTable): Result[Mutation] = {
@@ -154,14 +155,19 @@ class DatabaseService(connection: PostgresConnection, hub: Hub[CaseStatusChanged
       )
 }
 object DatabaseService {
-  private def create(config: PostgresConnection, hub: Hub[CaseStatusChanged]): DatabaseService =
+  private def create(config: PostgresTransactor, hub: Hub[CaseStatusChanged]): DatabaseService =
     new DatabaseService(config, hub)
 
-  val live: ZLayer[PostgresConnection with Hub[CaseStatusChanged], Throwable, DatabaseService] =
+  val live: ZLayer[PostgresTransactor with Hub[CaseStatusChanged], Throwable, DatabaseService] =
     ZLayer.fromFunction(create _)
 }
 
-case class PostgresConnection(transactor: Aux[Task, Unit]) {
+/*
+  When we perform a database operation using a Transactor, Doobie will automatically acquire a connection from the connection pool, perform the operation, and then release the connection back to the pool.
+  This ensures that the underlying database connections are properly managed and that resources are not leaked. We don't have to manually close the connections or explicitly release resources after a transaction, as Doobie takes care of that for us.
+  The Transactor provides a high-level API for performing database transactions in a clean and safe way, and the underlying implementation handles the low-level details of managing database connections.
+ */
+case class PostgresTransactor(transactor: Aux[Task, Unit]) {
   def executeMutation(fragment: Fragment): Result[Int] =
     transactor
       .trans
@@ -187,9 +193,9 @@ case class PostgresConnection(transactor: Aux[Task, Unit]) {
         PostgresError(e.getMessage, fragment.query.sql)
       )
 }
-object PostgresConnection {
-  private def create(driver: String, url: String, user: String, password: String): PostgresConnection =
-    PostgresConnection(
+object PostgresTransactor {
+  private def create(driver: String, url: String, user: String, password: String): PostgresTransactor =
+    PostgresTransactor(
       Transactor.fromDriverManager[Task](
         driver, // driver classname
         url, // JDBC URL
@@ -198,7 +204,7 @@ object PostgresConnection {
       )
     )
 
-  def live(driver: String, url: String, user: String, password: String): ZLayer[Any, Nothing, PostgresConnection] =
+  def live(driver: String, url: String, user: String, password: String): ZLayer[Any, Nothing, PostgresTransactor] =
     ZLayer.succeed(create(driver, url, user, password))
 }
 

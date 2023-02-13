@@ -1,5 +1,5 @@
 import com.company.cases._
-import com.company.cases.ErrorModel._
+import com.company.cases.RequestError._
 
 import zio._
 import zio.test.TestAspect._
@@ -197,7 +197,7 @@ object CaseSpec extends ZIOSpecDefault {
         ZLayer.fromZIO(
           Hub.unbounded[CaseStatusChanged]
         ),
-        PostgresConnection.live(
+        PostgresTransactor.live(
         "org.postgresql.Driver",
         "jdbc:postgresql://localhost:5432/casesdb",
         "postgres",

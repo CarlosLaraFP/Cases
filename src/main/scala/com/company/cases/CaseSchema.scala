@@ -1,6 +1,6 @@
 package com.company.cases
 
-import ErrorModel._
+import RequestError._
 
 import caliban.schema.Annotations.GQLDescription
 import zio.stream.ZStream

@@ -38,7 +38,6 @@ When you are done:
 # Next Steps
 
 * Improve domain model through functional domain-driven design
-* Replace global connection singleton with a limited connection pool
 * Increase property-based unit and integration testing, including failure test cases
 * Add proactive retry to extend sequential retry (distributed systems best practices from AWS)
 * Use zio-config to extract configuration values from environment variables
