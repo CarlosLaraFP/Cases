@@ -1,11 +1,10 @@
 package com.company.cases
 
 import ErrorModel._
+
 import cats.data.Validated
-//import cats.syntax.monoid._
+import cats.syntax.semigroup._
 import zio.{IO, UIO, ZIO}
-import zio.interop.catz._
-import cats.implicits._
 
 import java.time.{Instant, LocalDate}
 import java.util.UUID
@@ -15,20 +14,33 @@ import scala.util.Try
   ZIO parallel combinators automatically run effects on separate Fibers, including handling interruptions.
  */
 
-//sealed trait Validation
+sealed trait Validation
 object Validation {
   type ArgumentValidation[T] = UIO[Validated[InputValidationError, T]]
   type InputValidation[T] = IO[InputValidationError, T]
 
-  private def nameValidation(name: String): ArgumentValidation[Unit] =
+  private case object NonEmptyString extends Validation
+  private case object StringLength extends Validation
+
+  private def stringValidation(value: String, argName: String, validation: Validation): ArgumentValidation[Unit] =
     ZIO.succeed {
-      Validated.cond(name.nonEmpty, (), InputValidationError("Name must not be blank."))
-        .combine(Validated.cond(name.length < 100, (), InputValidationError("Name must be less than 100 characters.")))
+      validation match {
+        case NonEmptyString => Validated.cond(
+          value.nonEmpty,
+          (),
+          InputValidationError(s"$argName must not be blank.")
+        )
+        case StringLength => Validated.cond(
+          value.length < 100,
+          (),
+          InputValidationError(s"$argName must be less than 100 characters.")
+        )
+      }
     }
 
   private def dateValidation(date: Option[String]): ArgumentValidation[Unit] =
     ZIO.succeed {
-      if (date.isEmpty) Validated.valid("")
+      if (date.isEmpty) Validated.valid(())
       else Validated
         .fromTry(Try(LocalDate.parse(date.get).toString))
         .bimap(e =>
@@ -41,7 +53,7 @@ object Validation {
 
   private def instantValidation(instant: Option[String]): ArgumentValidation[Unit] =
     ZIO.succeed {
-      if (instant.isEmpty) Validated.valid("")
+      if (instant.isEmpty) Validated.valid(())
       else Validated
         .fromTry(Try(Instant.parse(instant.get).toString))
         .bimap(e =>
@@ -71,32 +83,34 @@ object Validation {
   implicit class ValidateCreateCase(args: CreateCase) {
     private def validationEffects: Vector[ArgumentValidation[Unit]] =
       Vector(
-        nameValidation(args.name),
+        stringValidation(args.name, "Name", NonEmptyString),
+        stringValidation(args.name, "Name", StringLength),
         dateValidation(Some(args.dateOfBirth)),
         dateValidation(args.dateOfDeath)
       )
 
+    private def createCase: Case =
+      Case(
+        UUID.randomUUID,
+        args.name,
+        LocalDate.parse(args.dateOfBirth),
+        if (args.dateOfDeath.nonEmpty) Some(LocalDate.parse(args.dateOfDeath.get)) else Option.empty[LocalDate],
+        CaseStatus.Pending, // a new Case starts Pending
+        Instant.now,
+        Instant.now
+      )
+
     def validate: InputValidation[Case] =
       for {
-        validated <- ZIO
-          .reduceAllPar(
-            ZIO.succeed(Validated.valid(())),
-            validationEffects
-          )(_ |+| _)
-        either = validated
-          .map(_ =>
-            Case(
-              UUID.randomUUID,
-              args.name,
-              LocalDate.parse(args.dateOfBirth),
-              if (args.dateOfDeath.nonEmpty) Some(LocalDate.parse(args.dateOfDeath.get)) else Option.empty[LocalDate],
-              CaseStatus.Pending, // a new Case starts Pending
-              Instant.now,
-              Instant.now
-            )
-          )
-          .toEither
-        newCase <- ZIO.fromEither(either)
+        validated <- ZIO.reduceAllPar(
+          ZIO.succeed(Validated.valid(())),
+          validationEffects
+        )(_ |+| _)
+        newCase <- ZIO.fromEither(
+          validated.map(_ =>
+            createCase
+          ).toEither
+        )
       } yield newCase
   }
 }

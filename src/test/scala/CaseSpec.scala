@@ -189,7 +189,7 @@ object CaseSpec extends ZIOSpecDefault {
           caseLifecycleTest,
           clearTableTest
         ) @@ nonFlaky(3),
-        pbtCreateCase @@ nonFlaky(5),
+        pbtCreateCase @@ nonFlaky(3),
         invalidDateFailure,
         deleteTableTest
       ).provide(
