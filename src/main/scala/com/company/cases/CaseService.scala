@@ -83,7 +83,7 @@ class DatabaseService(connection: PostgresConnection, hub: Hub[CaseStatusChanged
 
   def createCase(args: CreateCase): Result[Mutation] =
     for {
-      newCase <- ZIO.fromEither(args.validate.toEither)
+      newCase <- args.validate
       _ <- connection
         .executeMutation(
           sql"""
@@ -108,7 +108,7 @@ class DatabaseService(connection: PostgresConnection, hub: Hub[CaseStatusChanged
   def listCases(args: ListCases): Result[Vector[Case]] =
     // TODO: functional streaming library fs2 to use Stream instead of List to avoid potential OOM runtime exception
     for {
-      _ <- ZIO.fromEither(args.validate.toEither)
+      _ <- args.validate
       cases <- connection
         .executeQuery[Case](
           sql"""
