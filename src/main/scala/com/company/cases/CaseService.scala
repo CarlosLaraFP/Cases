@@ -76,7 +76,8 @@ class DatabaseService(connection: PostgresTransactor, hub: Hub[CaseStatusChanged
     }
     connection
       .executeMutation(
-        postgresQuery.stripMargin
+        postgresQuery
+          .stripMargin
       )
       .map(_ =>
         Mutation(s"${args.action} successful", None, None)
@@ -85,7 +86,7 @@ class DatabaseService(connection: PostgresTransactor, hub: Hub[CaseStatusChanged
 
   def createCase(args: CreateCase): Result[Mutation] =
     for {
-      newCase <- args.validate
+      newCase <- args.validate // once validation is complete, the Mutation cannot be interrupted
       _ <- connection
         .executeMutation(
           sql"""
@@ -114,26 +115,25 @@ class DatabaseService(connection: PostgresTransactor, hub: Hub[CaseStatusChanged
       sql"""
         SELECT id, name, dateOfBirth, dateOfDeath, status, created, statusChange
         FROM "Case"
-        WHERE status = ${args.status.toString}
+        WHERE status = ${args.status.toString};
       """
         .stripMargin
     }
 
   def updateCase(args: UpdateCase): Result[Mutation] =
     for {
-      _ <- connection
-        .executeMutation(
-          sql"""
-            UPDATE "Case"
-            SET
-              status = ${args.status.toString},
-              statusChange = ${Instant.now}
-            WHERE id = ${args.id};
-          """
-            .stripMargin
-        )
-      _ <- hub
-        .publish(CaseStatusChanged(args.id, args.status))
+      _ <- connection.executeMutation(
+        sql"""
+          UPDATE "Case"
+          SET
+            status = ${args.status.toString},
+            statusChange = ${Instant.now}
+          WHERE id = ${args.id};
+        """
+          .stripMargin
+      )
+      _ <- (hub publish CaseStatusChanged(args.id, args.status))
+        .uninterruptible
         .forkDaemon
     } yield Mutation(
       s"Status ${args.status} applied successfully.",
@@ -169,16 +169,19 @@ object DatabaseService {
  */
 case class PostgresTransactor(transactor: Aux[Task, Unit]) {
   def executeMutation(fragment: Fragment): Result[Int] =
-    transactor
-      .trans
-      .apply(
-        fragment
-          .update
-          .run
-      )
-      .mapError(e =>
-        PostgresError(e.getMessage, fragment.query.sql)
-      )
+    // Mutations must not be interrupted to prevent possible corrupted states (atomic transactions)
+    ZIO.uninterruptible {
+      transactor
+        .trans
+        .apply(
+          fragment
+            .update
+            .run
+        )
+        .mapError(e =>
+          PostgresError(e.getMessage, fragment.query.sql)
+        )
+    }
 
   def executeQuery[T : Read](fragment: Fragment): Result[Vector[T]] =
     // requires an implicit Read[T] in scope
