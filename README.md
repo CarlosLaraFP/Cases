@@ -43,5 +43,6 @@ When you are done:
 * Use zio-config to extract configuration values from environment variables
 * Improve 'updateCase' API to allow Case changes beyond CaseStatus
 * Use functional streaming library fs2 for the 'listCases' API
+* Implement idempotency via requestId + cache to handle duplicate requests
 * Deploy GraphQL API as a serverless microservice (CodePipeline, CodeBuild, Docker, ECR, ALB -> ECS/EKS Fargate with horizontal auto-scaling, SQS, CloudWatch)
 * GraphQL API load testing to determine service stability as concurrency and RPS increase
